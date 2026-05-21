@@ -61,7 +61,7 @@ public class TransactionRepositoryAdapter implements TransactionRepositoryPort {
         entity.setAmount(data.getAmount());
         entity.setTransactionDate(data.getTransactionDate());
         entity.setReferencePaymentId(data.getReferencePaymentId());
-        entity.setCreatedBy(data.getWalletUserId());
+        entity.setCreatedBy(data.getCreatedBy());
         entity.setCreatedAt(data.getCreatedAt());
         return entity;
     }
@@ -74,6 +74,7 @@ public class TransactionRepositoryAdapter implements TransactionRepositoryPort {
                 .amount(entity.getAmount())
                 .transactionDate(entity.getTransactionDate())
                 .referencePaymentId(entity.getReferencePaymentId())
+                .createdBy(entity.getCreatedBy())
                 .createdAt(entity.getCreatedAt())
                 .build();
     }

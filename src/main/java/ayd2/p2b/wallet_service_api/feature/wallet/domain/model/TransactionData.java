@@ -22,5 +22,6 @@ public class TransactionData {
     private BigDecimal amount;
     private LocalDate transactionDate;
     private UUID referencePaymentId;
+    private UUID createdBy;
     private Instant createdAt;
 }

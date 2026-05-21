@@ -21,33 +21,38 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TopUpWalletUseCase {
 
-    private final WalletRepositoryPort walletRepositoryPort;
-    private final TransactionRepositoryPort transactionRepositoryPort;
-    private final WalletMapper walletMapper;
+        private final WalletRepositoryPort walletRepositoryPort;
+        private final TransactionRepositoryPort transactionRepositoryPort;
+        private final WalletMapper walletMapper;
 
-    @Transactional
-    public WalletBalanceResponse execute(UUID userId, TopUpRequest request) {
-        WalletAccount wallet = walletRepositoryPort.findByUserId(userId)
-                .orElseThrow(() -> new ApiException(
-                        HttpStatus.NOT_FOUND,
-                        "resource.not_found",
-                        "Wallet not found for user: " + userId
-                ));
+        @Transactional
+        public WalletBalanceResponse execute(UUID userId, TopUpRequest request) {
+                return execute(userId, userId, request);
+        }
 
-        wallet.credit(request.getAmount());
-        WalletAccount savedWallet = walletRepositoryPort.save(wallet);
+        @Transactional
+        public WalletBalanceResponse execute(UUID userId, UUID callerId, TopUpRequest request) {
+                WalletAccount wallet = walletRepositoryPort.findByUserId(userId)
+                                .orElseThrow(() -> new ApiException(
+                                                HttpStatus.NOT_FOUND,
+                                                "resource.not_found",
+                                                "Wallet not found for user: " + userId));
 
-        TransactionData transaction = TransactionData.builder()
-                .id(UUID.randomUUID())
-                .walletUserId(userId)
-                .type(TransactionType.TOP_UP)
-                .amount(request.getAmount())
-                .transactionDate(request.getTransactionDate())
-                .createdAt(Instant.now())
-                .build();
+                wallet.credit(request.getAmount());
+                WalletAccount savedWallet = walletRepositoryPort.save(wallet);
 
-        transactionRepositoryPort.save(transaction);
+                TransactionData transaction = TransactionData.builder()
+                                .id(UUID.randomUUID())
+                                .walletUserId(userId)
+                                .type(TransactionType.TOP_UP)
+                                .amount(request.getAmount())
+                                .transactionDate(request.getTransactionDate())
+                                .createdBy(callerId)
+                                .createdAt(Instant.now())
+                                .build();
 
-        return walletMapper.toBalanceResponse(savedWallet);
-    }
+                transactionRepositoryPort.save(transaction);
+
+                return walletMapper.toBalanceResponse(savedWallet);
+        }
 }

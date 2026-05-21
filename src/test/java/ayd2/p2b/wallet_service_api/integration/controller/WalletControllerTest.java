@@ -39,119 +39,128 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(SecurityConfig.class)
 class WalletControllerTest {
 
-    @Autowired
-    private MockMvc mvc;
+        @Autowired
+        private MockMvc mvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+        @Autowired
+        private ObjectMapper objectMapper;
 
-    @MockitoBean
-    private CreateWalletUseCase createWalletUseCase;
+        @MockitoBean
+        private CreateWalletUseCase createWalletUseCase;
 
-    @MockitoBean
-    private GetWalletBalanceUseCase getWalletBalanceUseCase;
+        @MockitoBean
+        private GetWalletBalanceUseCase getWalletBalanceUseCase;
 
-    @MockitoBean
-    private TopUpWalletUseCase topUpWalletUseCase;
+        @MockitoBean
+        private TopUpWalletUseCase topUpWalletUseCase;
 
-    @MockitoBean
-    private GetTransactionHistoryUseCase getTransactionHistoryUseCase;
+        @MockitoBean
+        private GetTransactionHistoryUseCase getTransactionHistoryUseCase;
 
-    @MockitoBean
-    private JwtTokenParser jwtTokenParser;
+        @MockitoBean
+        private JwtTokenParser jwtTokenParser;
 
-    @MockitoBean
-    private RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+        @MockitoBean
+        private RestAuthenticationEntryPoint restAuthenticationEntryPoint;
 
-    private static final UUID TEST_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        private static final UUID TEST_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
-    @BeforeEach
-    void setUp() throws Exception {
-        doAnswer(invocation -> {
-            HttpServletResponse response = invocation.getArgument(1);
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            return null;
-        }).when(restAuthenticationEntryPoint).commence(any(), any(), any());
-    }
+        @BeforeEach
+        void setUp() throws Exception {
+                doAnswer(invocation -> {
+                        HttpServletResponse response = invocation.getArgument(1);
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        return null;
+                }).when(restAuthenticationEntryPoint).commence(any(), any(), any());
+        }
 
-    @Test
-    @WithMockJwt(userId = "00000000-0000-0000-0000-000000000001", roles = "PARTICIPANT")
-    void should_return_201_when_wallet_created() throws Exception {
-        WalletBalanceResponse response = WalletBalanceResponse.builder()
-                .userId(TEST_USER_ID)
-                .balance(BigDecimal.ZERO)
-                .build();
+        @Test
+        @WithMockJwt(userId = "00000000-0000-0000-0000-000000000001", roles = "PARTICIPANT")
+        void should_return_201_when_wallet_created() throws Exception {
+                WalletBalanceResponse response = WalletBalanceResponse.builder()
+                                .userId(TEST_USER_ID)
+                                .balance(BigDecimal.ZERO)
+                                .build();
 
-        given(createWalletUseCase.execute(any())).willReturn(response);
+                given(createWalletUseCase.execute(any())).willReturn(response);
 
-        mvc.perform(post("/wallets")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"userId\":\"00000000-0000-0000-0000-000000000001\"}"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.userId").value(TEST_USER_ID.toString()));
-    }
+                mvc.perform(post("/wallets")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"userId\":\"00000000-0000-0000-0000-000000000001\"}"))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.data.userId").value(TEST_USER_ID.toString()));
+        }
 
-    @Test
-    @WithMockJwt(userId = "00000000-0000-0000-0000-000000000001", roles = "PARTICIPANT")
-    void should_return_200_when_get_balance() throws Exception {
-        WalletBalanceResponse response = WalletBalanceResponse.builder()
-                .userId(TEST_USER_ID)
-                .balance(new BigDecimal("100.00"))
-                .build();
+        @Test
+        @WithMockJwt(userId = "00000000-0000-0000-0000-000000000002", roles = "PARTICIPANT")
+        void should_return_403_when_wallet_userId_does_not_match_principal() throws Exception {
+                mvc.perform(post("/wallets")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"userId\":\"00000000-0000-0000-0000-000000000001\"}"))
+                                .andExpect(status().isForbidden());
+        }
 
-        given(getWalletBalanceUseCase.execute(any())).willReturn(response);
+        @Test
+        @WithMockJwt(userId = "00000000-0000-0000-0000-000000000001", roles = "PARTICIPANT")
+        void should_return_200_when_get_balance() throws Exception {
+                WalletBalanceResponse response = WalletBalanceResponse.builder()
+                                .userId(TEST_USER_ID)
+                                .balance(new BigDecimal("100.00"))
+                                .build();
 
-        mvc.perform(get("/wallet/balance"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.balance").value(100.00));
-    }
+                given(getWalletBalanceUseCase.execute(any())).willReturn(response);
 
-    @Test
-    void should_return_401_when_get_balance_unauthenticated() throws Exception {
-        mvc.perform(get("/wallet/balance"))
-                .andExpect(status().isUnauthorized());
-    }
+                mvc.perform(get("/wallet/balance"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.balance").value(100.00));
+        }
 
-    @Test
-    @WithMockJwt(userId = "00000000-0000-0000-0000-000000000001", roles = "PARTICIPANT")
-    void should_return_200_when_top_up() throws Exception {
-        WalletBalanceResponse response = WalletBalanceResponse.builder()
-                .userId(TEST_USER_ID)
-                .balance(new BigDecimal("50.00"))
-                .build();
+        @Test
+        void should_return_401_when_get_balance_unauthenticated() throws Exception {
+                mvc.perform(get("/wallet/balance"))
+                                .andExpect(status().isUnauthorized());
+        }
 
-        given(topUpWalletUseCase.execute(any(), any())).willReturn(response);
+        @Test
+        @WithMockJwt(userId = "00000000-0000-0000-0000-000000000001", roles = "PARTICIPANT")
+        void should_return_200_when_top_up() throws Exception {
+                WalletBalanceResponse response = WalletBalanceResponse.builder()
+                                .userId(TEST_USER_ID)
+                                .balance(new BigDecimal("50.00"))
+                                .build();
 
-        mvc.perform(post("/wallet/top-up")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"amount\":50.00,\"transactionDate\":\"2026-01-01\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.balance").value(50.00));
-    }
+                given(topUpWalletUseCase.execute(any(), any(), any())).willReturn(response);
 
-    @Test
-    @WithMockJwt(userId = "00000000-0000-0000-0000-000000000001", roles = "PARTICIPANT")
-    void should_return_400_when_top_up_invalid_amount() throws Exception {
-        mvc.perform(post("/wallet/top-up")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"amount\":-10.00,\"transactionDate\":\"2026-01-01\"}"))
-                .andExpect(status().isBadRequest());
-    }
+                mvc.perform(post("/wallet/top-up")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"amount\":50.00,\"transactionDate\":\"2026-01-01\"}"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.balance").value(50.00));
+        }
 
-    @Test
-    @WithMockJwt(userId = "00000000-0000-0000-0000-000000000001", roles = "PARTICIPANT")
-    void should_return_200_when_get_transactions() throws Exception {
-        PageResponse<TransactionResponse> page = PageResponse.<TransactionResponse>builder()
-                .items(List.of())
-                .page(0)
-                .size(20)
-                .totalItems(0)
-                .totalPages(0)
-                .build();
+        @Test
+        @WithMockJwt(userId = "00000000-0000-0000-0000-000000000001", roles = "PARTICIPANT")
+        void should_return_400_when_top_up_invalid_amount() throws Exception {
+                mvc.perform(post("/wallet/top-up")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"amount\":-10.00,\"transactionDate\":\"2026-01-01\"}"))
+                                .andExpect(status().isBadRequest());
+        }
 
-        given(getTransactionHistoryUseCase.execute(any(), any())).willReturn(page);
+        @Test
+        @WithMockJwt(userId = "00000000-0000-0000-0000-000000000001", roles = "PARTICIPANT")
+        void should_return_200_when_get_transactions() throws Exception {
+                PageResponse<TransactionResponse> page = PageResponse.<TransactionResponse>builder()
+                                .items(List.of())
+                                .page(0)
+                                .size(20)
+                                .totalItems(0)
+                                .totalPages(0)
+                                .build();
 
-        mvc.perform(get("/wallet/transactions"))
-                .andExpect(status().isOk());
-    }
+                given(getTransactionHistoryUseCase.execute(any(), any())).willReturn(page);
+
+                mvc.perform(get("/wallet/transactions"))
+                                .andExpect(status().isOk());
+        }
 }

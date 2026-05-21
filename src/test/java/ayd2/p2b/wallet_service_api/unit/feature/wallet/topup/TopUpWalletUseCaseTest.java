@@ -24,6 +24,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
@@ -96,5 +97,29 @@ class TopUpWalletUseCaseTest {
         given(walletRepositoryPort.findByUserId(userId)).willReturn(Optional.empty());
 
         assertThrows(ApiException.class, () -> useCase.execute(userId, request));
+    }
+
+    @Test
+    void should_set_created_by_to_caller_id_not_wallet_owner_id() {
+        UUID walletOwnerId = UUID.randomUUID();
+        UUID callerId = UUID.randomUUID();
+        WalletAccount wallet = WalletAccount.reconstitute(walletOwnerId, BigDecimal.ZERO, 0L);
+        TopUpRequest request = TopUpRequest.builder()
+                .amount(new BigDecimal("50.00"))
+                .transactionDate(LocalDate.now())
+                .build();
+        WalletBalanceResponse expected = WalletBalanceResponse.builder()
+                .userId(walletOwnerId)
+                .balance(new BigDecimal("50.00"))
+                .build();
+
+        given(walletRepositoryPort.findByUserId(walletOwnerId)).willReturn(Optional.of(wallet));
+        given(walletRepositoryPort.save(any())).willReturn(wallet);
+        given(transactionRepositoryPort.save(any())).willReturn(TransactionData.builder().build());
+        given(walletMapper.toBalanceResponse(any())).willReturn(expected);
+
+        useCase.execute(walletOwnerId, callerId, request);
+
+        then(transactionRepositoryPort).should().save(argThat(t -> callerId.equals(t.getCreatedBy())));
     }
 }

@@ -60,6 +60,7 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-test'
     testImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
 
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.testcontainers:junit-jupiter:1.21.4'
     testImplementation 'org.testcontainers:postgresql:1.21.4'
 
@@ -96,6 +97,10 @@ tasks.named('test') {
     if (skipPersistenceTests) {
         exclude '**/integration/persistence/**'
         exclude '**/WalletServiceApiApplicationTests*'
+    }
+    testLogging {
+        events 'passed', 'failed', 'skipped'
+        showStandardStreams = false
     }
     finalizedBy tasks.named('jacocoTestReport')
 }
