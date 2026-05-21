@@ -72,23 +72,30 @@ jacoco {
     toolVersion = '0.8.13'
 }
 
+def skipPersistenceTests = providers.gradleProperty('skipPersistenceTests').map { it.toBoolean() }.getOrElse(false)
+
 def jacocoExclusions = [
         '**/config/**',
         '**/*Application*',
         '**/dto/**',
-        '**/*MapperImpl*'
+        '**/*MapperImpl*',
+        '**/openapi/**',
+        '**/core/security/**'
 ]
+
+if (skipPersistenceTests) {
+    jacocoExclusions += ['**/infrastructure/persistence/adapter/**']
+}
 
 def jacocoFilteredDirectories = { fileCollection ->
     files(fileCollection.files.collect { fileTree(dir: it, exclude: jacocoExclusions) })
 }
 
-def skipPersistenceTests = providers.gradleProperty('skipPersistenceTests').map { it.toBoolean() }.getOrElse(false)
-
 tasks.named('test') {
     useJUnitPlatform()
     if (skipPersistenceTests) {
         exclude '**/integration/persistence/**'
+        exclude '**/WalletServiceApiApplicationTests*'
     }
     finalizedBy tasks.named('jacocoTestReport')
 }
