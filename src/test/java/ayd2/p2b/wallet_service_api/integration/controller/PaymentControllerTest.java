@@ -7,6 +7,7 @@ import ayd2.p2b.wallet_service_api.core.security.RestAuthenticationEntryPoint;
 import ayd2.p2b.wallet_service_api.core.security.SecurityConfig;
 import ayd2.p2b.wallet_service_api.feature.payment.application.get.GetPaymentUseCase;
 import ayd2.p2b.wallet_service_api.feature.payment.application.list.ListPaymentsUseCase;
+import ayd2.p2b.wallet_service_api.feature.payment.application.register.RegisterPaymentResult;
 import ayd2.p2b.wallet_service_api.feature.payment.application.register.RegisterPaymentUseCase;
 import ayd2.p2b.wallet_service_api.feature.payment.controller.PaymentController;
 import ayd2.p2b.wallet_service_api.feature.payment.dto.response.PaymentResponse;
@@ -91,13 +92,36 @@ class PaymentControllerTest {
                                 .netAmount(new BigDecimal("90.00"))
                                 .build();
 
-                given(registerPaymentUseCase.execute(any(), any(), any())).willReturn(response);
+                given(registerPaymentUseCase.execute(any(), any(), any()))
+                                .willReturn(RegisterPaymentResult.newPayment(response));
 
                 mvc.perform(post("/payments/register")
                                 .header("Idempotency-Key", "test-key-001")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(validRegisterBody()))
                                 .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.data.amount").value(100.00));
+        }
+
+        // [RED] replay must return 200 OK with idempotency.replay in the message field
+        @Test
+        @WithMockJwt(userId = "00000000-0000-0000-0000-000000000001", roles = "CONGRESS_ADMIN")
+        void should_return_200_with_idempotency_replay_when_payment_already_exists() throws Exception {
+                PaymentResponse response = PaymentResponse.builder()
+                                .id(PAYMENT_ID)
+                                .userId(USER_ID)
+                                .amount(new BigDecimal("100.00"))
+                                .build();
+
+                given(registerPaymentUseCase.execute(any(), any(), any()))
+                                .willReturn(RegisterPaymentResult.replay(response));
+
+                mvc.perform(post("/payments/register")
+                                .header("Idempotency-Key", "existing-key-001")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(validRegisterBody()))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("idempotency.replay"))
                                 .andExpect(jsonPath("$.data.amount").value(100.00));
         }
 

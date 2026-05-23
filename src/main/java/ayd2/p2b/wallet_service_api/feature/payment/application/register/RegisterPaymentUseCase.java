@@ -34,10 +34,10 @@ public class RegisterPaymentUseCase {
     private final PaymentMapper paymentMapper;
 
     @Transactional
-    public PaymentResponse execute(RegisterPaymentCommand command, String idempotencyKey, RequesterContext requester) {
+    public RegisterPaymentResult execute(RegisterPaymentCommand command, String idempotencyKey, RequesterContext requester) {
         return paymentRepository.findByIdempotencyKey(idempotencyKey)
-                .map(paymentMapper::toResponse)
-                .orElseGet(() -> registerNew(command, idempotencyKey, requester));
+                .map(existing -> RegisterPaymentResult.replay(paymentMapper.toResponse(existing)))
+                .orElseGet(() -> RegisterPaymentResult.newPayment(registerNew(command, idempotencyKey, requester)));
     }
 
     private PaymentResponse registerNew(RegisterPaymentCommand command, String idempotencyKey,

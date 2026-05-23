@@ -3,6 +3,7 @@ package ayd2.p2b.wallet_service_api.unit.feature.payment.register;
 import ayd2.p2b.wallet_service_api.common.dto.internal.RequesterContext;
 import ayd2.p2b.wallet_service_api.common.exception.ApiException;
 import ayd2.p2b.wallet_service_api.feature.payment.application.port.PaymentRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.payment.application.register.RegisterPaymentResult;
 import ayd2.p2b.wallet_service_api.feature.payment.application.register.RegisterPaymentUseCase;
 import ayd2.p2b.wallet_service_api.feature.payment.domain.model.PaymentData;
 import ayd2.p2b.wallet_service_api.feature.payment.dto.internal.RegisterPaymentCommand;
@@ -158,11 +159,12 @@ class RegisterPaymentUseCaseTest {
         given(paymentRepository.save(any())).willReturn(savedPayment);
         given(paymentMapper.toResponse(any())).willReturn(expectedResponse);
 
-        PaymentResponse result = useCase.execute(command, IDEMPOTENCY_KEY, requester);
+        RegisterPaymentResult result = useCase.execute(command, IDEMPOTENCY_KEY, requester);
 
-        assertThat(result.getAmount()).isEqualByComparingTo("100.00");
-        assertThat(result.getCommissionAmount()).isEqualByComparingTo("10.00");
-        assertThat(result.getNetAmount()).isEqualByComparingTo("90.00");
+        assertThat(result.isReplay()).isFalse();
+        assertThat(result.getPayload().getAmount()).isEqualByComparingTo("100.00");
+        assertThat(result.getPayload().getCommissionAmount()).isEqualByComparingTo("10.00");
+        assertThat(result.getPayload().getNetAmount()).isEqualByComparingTo("90.00");
         then(walletRepository).should().save(any());
         then(transactionRepository).should().save(any());
         then(paymentRepository).should().save(any());
@@ -179,9 +181,10 @@ class RegisterPaymentUseCaseTest {
         given(paymentRepository.findByIdempotencyKey(IDEMPOTENCY_KEY)).willReturn(Optional.of(existingPayment));
         given(paymentMapper.toResponse(existingPayment)).willReturn(expectedResponse);
 
-        PaymentResponse result = useCase.execute(buildCommand(), IDEMPOTENCY_KEY, requester);
+        RegisterPaymentResult result = useCase.execute(buildCommand(), IDEMPOTENCY_KEY, requester);
 
-        assertThat(result.getAmount()).isEqualByComparingTo("100.00");
+        assertThat(result.isReplay()).isTrue();
+        assertThat(result.getPayload().getAmount()).isEqualByComparingTo("100.00");
         then(walletRepository).should(never()).findByUserId(any());
         then(walletRepository).should(never()).save(any());
         then(transactionRepository).should(never()).save(any());

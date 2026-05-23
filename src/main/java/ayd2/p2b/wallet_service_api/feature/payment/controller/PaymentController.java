@@ -7,6 +7,7 @@ import ayd2.p2b.wallet_service_api.common.response.PageResponse;
 import ayd2.p2b.wallet_service_api.core.security.AuthenticatedUser;
 import ayd2.p2b.wallet_service_api.feature.payment.application.get.GetPaymentUseCase;
 import ayd2.p2b.wallet_service_api.feature.payment.application.list.ListPaymentsUseCase;
+import ayd2.p2b.wallet_service_api.feature.payment.application.register.RegisterPaymentResult;
 import ayd2.p2b.wallet_service_api.feature.payment.application.register.RegisterPaymentUseCase;
 import ayd2.p2b.wallet_service_api.feature.payment.dto.internal.PaymentSearchCriteria;
 import ayd2.p2b.wallet_service_api.feature.payment.dto.internal.RegisterPaymentCommand;
@@ -85,8 +86,11 @@ public class PaymentController {
                 .paymentDate(request.getPaymentDate())
                 .build();
 
-        PaymentResponse response = registerPaymentUseCase.execute(command, idempotencyKey, requester);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.of(response));
+        RegisterPaymentResult result = registerPaymentUseCase.execute(command, idempotencyKey, requester);
+        if (result.isReplay()) {
+            return ResponseEntity.ok(ApiResponse.of(result.getPayload(), "idempotency.replay"));
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.of(result.getPayload()));
     }
 
     @GetMapping("/payments/{id}")
