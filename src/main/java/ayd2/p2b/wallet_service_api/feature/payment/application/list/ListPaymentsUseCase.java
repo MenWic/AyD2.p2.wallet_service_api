@@ -1,8 +1,9 @@
 package ayd2.p2b.wallet_service_api.feature.payment.application.list;
 
 import ayd2.p2b.wallet_service_api.common.response.PageResponse;
-import ayd2.p2b.wallet_service_api.feature.payment.PaymentRepositoryPort;
-import ayd2.p2b.wallet_service_api.feature.payment.dto.request.PaymentFilterRequest;
+import ayd2.p2b.wallet_service_api.feature.payment.application.port.PaymentRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.payment.domain.model.PaymentData;
+import ayd2.p2b.wallet_service_api.feature.payment.dto.internal.PaymentSearchCriteria;
 import ayd2.p2b.wallet_service_api.feature.payment.dto.response.PaymentResponse;
 import ayd2.p2b.wallet_service_api.feature.payment.mapper.PaymentMapper;
 import lombok.RequiredArgsConstructor;
@@ -17,9 +18,8 @@ public class ListPaymentsUseCase {
     private final PaymentRepositoryPort paymentRepository;
     private final PaymentMapper paymentMapper;
 
-    public PageResponse<PaymentResponse> execute(PaymentFilterRequest filter) {
-        PageResponse<ayd2.p2b.wallet_service_api.feature.payment.domain.model.PaymentData> dataPage =
-                paymentRepository.findAll(filter);
+    public PageResponse<PaymentResponse> execute(PaymentSearchCriteria criteria) {
+        PageResponse<PaymentData> dataPage = paymentRepository.findAll(criteria);
 
         List<PaymentResponse> items = dataPage.getItems().stream()
                 .map(paymentMapper::toResponse)

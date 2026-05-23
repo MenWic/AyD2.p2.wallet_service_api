@@ -10,7 +10,6 @@ import ayd2.p2b.wallet_service_api.feature.payment.application.list.ListPayments
 import ayd2.p2b.wallet_service_api.feature.payment.application.register.RegisterPaymentUseCase;
 import ayd2.p2b.wallet_service_api.feature.payment.controller.PaymentController;
 import ayd2.p2b.wallet_service_api.feature.payment.dto.response.PaymentResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,9 +38,6 @@ class PaymentControllerTest {
 
         @Autowired
         private MockMvc mvc;
-
-        @Autowired
-        private ObjectMapper objectMapper;
 
         @MockitoBean
         private RegisterPaymentUseCase registerPaymentUseCase;
@@ -72,6 +68,18 @@ class PaymentControllerTest {
                 }).when(restAuthenticationEntryPoint).commence(any(), any(), any());
         }
 
+        private String validRegisterBody() {
+                return "{\"userId\":\"" + USER_ID + "\","
+                        + "\"congressId\":\"" + CONGRESS_ID + "\","
+                        + "\"institutionId\":\"" + INSTITUTION_ID + "\","
+                        + "\"congressNameSnapshot\":\"Test Congress\","
+                        + "\"institutionNameSnapshot\":\"Test Institution\","
+                        + "\"amount\":100.00,"
+                        + "\"paymentDate\":\"2026-05-20\"}";
+        }
+
+        // --- Register payment ---
+
         @Test
         @WithMockJwt(userId = "00000000-0000-0000-0000-000000000001", roles = "CONGRESS_ADMIN")
         void should_return_201_when_payment_registered() throws Exception {
@@ -85,63 +93,55 @@ class PaymentControllerTest {
 
                 given(registerPaymentUseCase.execute(any(), any(), any())).willReturn(response);
 
-                String body = objectMapper.writeValueAsString(
-                                new java.util.HashMap<String, Object>() {
-                                        {
-                                                put("userId", USER_ID.toString());
-                                                put("congressId", CONGRESS_ID.toString());
-                                                put("institutionId", INSTITUTION_ID.toString());
-                                                put("congressNameSnapshot", "Test Congress");
-                                                put("institutionNameSnapshot", "Test Institution");
-                                                put("amount", "100.00");
-                                                put("paymentDate", "2026-05-20");
-                                        }
-                                });
-
                 mvc.perform(post("/payments/register")
                                 .header("Idempotency-Key", "test-key-001")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(body))
+                                .content(validRegisterBody()))
                                 .andExpect(status().isCreated())
                                 .andExpect(jsonPath("$.data.amount").value(100.00));
         }
 
         @Test
-        void should_return_401_when_no_auth_on_register() throws Exception {
-                String body = "{\"userId\":\"" + USER_ID + "\",\"congressId\":\"" + CONGRESS_ID
-                                + "\",\"institutionId\":\"" + INSTITUTION_ID
-                                + "\",\"congressNameSnapshot\":\"Test\",\"institutionNameSnapshot\":\"Inst\""
-                                + ",\"amount\":100.00,\"paymentDate\":\"2026-05-20\"}";
+        @WithMockJwt(userId = "00000000-0000-0000-0000-000000000001", roles = "CONGRESS_ADMIN")
+        void should_return_400_when_idempotency_key_is_missing() throws Exception {
+                mvc.perform(post("/payments/register")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(validRegisterBody()))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.code").value("validation.failed"));
+        }
 
+        @Test
+        @WithMockJwt(userId = "00000000-0000-0000-0000-000000000001", roles = "CONGRESS_ADMIN")
+        void should_return_400_when_idempotency_key_is_blank() throws Exception {
+                mvc.perform(post("/payments/register")
+                                .header("Idempotency-Key", "   ")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(validRegisterBody()))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.code").value("validation.failed"));
+        }
+
+        @Test
+        void should_return_401_when_no_auth_on_register() throws Exception {
                 mvc.perform(post("/payments/register")
                                 .header("Idempotency-Key", "test-key-001")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(body))
+                                .content(validRegisterBody()))
                                 .andExpect(status().isUnauthorized());
         }
 
         @Test
         @WithMockJwt(userId = "00000000-0000-0000-0000-000000000001", roles = "PARTICIPANT")
         void should_return_403_when_participant_tries_to_register_payment() throws Exception {
-                String body = objectMapper.writeValueAsString(
-                                new java.util.HashMap<String, Object>() {
-                                        {
-                                                put("userId", USER_ID.toString());
-                                                put("congressId", CONGRESS_ID.toString());
-                                                put("institutionId", INSTITUTION_ID.toString());
-                                                put("congressNameSnapshot", "Test Congress");
-                                                put("institutionNameSnapshot", "Test Institution");
-                                                put("amount", "100.00");
-                                                put("paymentDate", "2026-05-20");
-                                        }
-                                });
-
                 mvc.perform(post("/payments/register")
                                 .header("Idempotency-Key", "test-key-002")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(body))
+                                .content(validRegisterBody()))
                                 .andExpect(status().isForbidden());
         }
+
+        // --- Get payment by ID ---
 
         @Test
         @WithMockJwt(userId = "00000000-0000-0000-0000-000000000001", roles = "SYSTEM_ADMIN")
@@ -152,12 +152,21 @@ class PaymentControllerTest {
                                 .amount(new BigDecimal("100.00"))
                                 .build();
 
-                given(getPaymentUseCase.execute(any(), any(), any())).willReturn(response);
+                // GetPaymentUseCase.execute(UUID, RequesterContext) — 2 args
+                given(getPaymentUseCase.execute(any(), any())).willReturn(response);
 
                 mvc.perform(get("/payments/{id}", PAYMENT_ID))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.data.id").value(PAYMENT_ID.toString()));
         }
+
+        @Test
+        void should_return_401_when_no_auth_on_get_payment() throws Exception {
+                mvc.perform(get("/payments/{id}", PAYMENT_ID))
+                                .andExpect(status().isUnauthorized());
+        }
+
+        // --- List payments ---
 
         @Test
         @WithMockJwt(roles = "SYSTEM_ADMIN")
@@ -174,5 +183,26 @@ class PaymentControllerTest {
 
                 mvc.perform(get("/payments"))
                                 .andExpect(status().isOk());
+        }
+
+        @Test
+        void should_return_401_when_no_auth_on_list_payments() throws Exception {
+                mvc.perform(get("/payments"))
+                                .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @WithMockJwt(roles = "PARTICIPANT")
+        void should_return_403_when_participant_tries_to_list_payments() throws Exception {
+                mvc.perform(get("/payments"))
+                                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @WithMockJwt(roles = "SYSTEM_ADMIN")
+        void should_return_400_when_list_payments_date_from_is_after_date_to() throws Exception {
+                mvc.perform(get("/payments?dateFrom=2025-12-31&dateTo=2025-01-01"))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.code").value("validation.failed"));
         }
 }

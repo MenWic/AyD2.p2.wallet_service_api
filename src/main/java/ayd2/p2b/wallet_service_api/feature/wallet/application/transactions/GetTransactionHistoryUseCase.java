@@ -1,9 +1,9 @@
 package ayd2.p2b.wallet_service_api.feature.wallet.application.transactions;
 
 import ayd2.p2b.wallet_service_api.common.response.PageResponse;
-import ayd2.p2b.wallet_service_api.feature.wallet.TransactionRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.wallet.application.port.TransactionRepositoryPort;
 import ayd2.p2b.wallet_service_api.feature.wallet.domain.model.TransactionData;
-import ayd2.p2b.wallet_service_api.feature.wallet.dto.request.TransactionFilterRequest;
+import ayd2.p2b.wallet_service_api.feature.wallet.dto.internal.TransactionSearchCriteria;
 import ayd2.p2b.wallet_service_api.feature.wallet.dto.response.TransactionResponse;
 import ayd2.p2b.wallet_service_api.feature.wallet.mapper.WalletMapper;
 import lombok.RequiredArgsConstructor;
@@ -21,8 +21,8 @@ public class GetTransactionHistoryUseCase {
     private final WalletMapper walletMapper;
 
     @Transactional(readOnly = true)
-    public PageResponse<TransactionResponse> execute(UUID userId, TransactionFilterRequest filter) {
-        PageResponse<TransactionData> dataPage = transactionRepositoryPort.findByUserId(userId, filter);
+    public PageResponse<TransactionResponse> execute(UUID userId, TransactionSearchCriteria criteria) {
+        PageResponse<TransactionData> dataPage = transactionRepositoryPort.findByUserId(userId, criteria);
         List<TransactionResponse> mapped = dataPage.getItems().stream()
                 .map(walletMapper::toTransactionResponse)
                 .toList();

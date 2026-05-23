@@ -1,6 +1,6 @@
 package ayd2.p2b.wallet_service_api.feature.wallet.infrastructure.persistence.adapter;
 
-import ayd2.p2b.wallet_service_api.feature.wallet.WalletRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.wallet.application.port.WalletRepositoryPort;
 import ayd2.p2b.wallet_service_api.feature.wallet.domain.model.WalletAccount;
 import ayd2.p2b.wallet_service_api.feature.wallet.infrastructure.persistence.entity.WalletEntity;
 import ayd2.p2b.wallet_service_api.feature.wallet.infrastructure.persistence.repository.WalletJpaRepository;

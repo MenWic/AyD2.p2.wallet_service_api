@@ -1,28 +1,32 @@
 package ayd2.p2b.wallet_service_api.unit.feature.payment.register;
 
+import ayd2.p2b.wallet_service_api.common.dto.internal.RequesterContext;
 import ayd2.p2b.wallet_service_api.common.exception.ApiException;
-import ayd2.p2b.wallet_service_api.feature.payment.PaymentRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.payment.application.port.PaymentRepositoryPort;
 import ayd2.p2b.wallet_service_api.feature.payment.application.register.RegisterPaymentUseCase;
 import ayd2.p2b.wallet_service_api.feature.payment.domain.model.PaymentData;
-import ayd2.p2b.wallet_service_api.feature.payment.dto.request.RegisterPaymentRequest;
+import ayd2.p2b.wallet_service_api.feature.payment.dto.internal.RegisterPaymentCommand;
 import ayd2.p2b.wallet_service_api.feature.payment.dto.response.PaymentResponse;
 import ayd2.p2b.wallet_service_api.feature.payment.mapper.PaymentMapper;
-import ayd2.p2b.wallet_service_api.feature.systemconfig.SystemConfigData;
-import ayd2.p2b.wallet_service_api.feature.systemconfig.SystemConfigRepositoryPort;
-import ayd2.p2b.wallet_service_api.feature.wallet.TransactionRepositoryPort;
-import ayd2.p2b.wallet_service_api.feature.wallet.WalletRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.systemconfig.dto.internal.SystemConfigData;
+import ayd2.p2b.wallet_service_api.feature.systemconfig.application.port.SystemConfigRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.wallet.application.port.TransactionRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.wallet.application.port.WalletRepositoryPort;
 import ayd2.p2b.wallet_service_api.feature.wallet.domain.exception.InsufficientFundsException;
 import ayd2.p2b.wallet_service_api.feature.wallet.domain.model.TransactionData;
+import ayd2.p2b.wallet_service_api.feature.wallet.domain.model.TransactionType;
 import ayd2.p2b.wallet_service_api.feature.wallet.domain.model.WalletAccount;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,7 +59,7 @@ class RegisterPaymentUseCaseTest {
     private static final UUID USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
     private static final UUID CONGRESS_ID = UUID.fromString("00000000-0000-0000-0000-000000000002");
     private static final UUID INSTITUTION_ID = UUID.fromString("00000000-0000-0000-0000-000000000003");
-    private static final UUID CREATED_BY = UUID.fromString("00000000-0000-0000-0000-000000000004");
+    private static final UUID REQUESTER_ID = UUID.fromString("00000000-0000-0000-0000-000000000004");
     private static final String IDEMPOTENCY_KEY = "test-idempotency-key-001";
 
     @BeforeEach
@@ -65,38 +69,80 @@ class RegisterPaymentUseCaseTest {
         );
     }
 
+    // [RED] Test added to assert createdBy is set on both Payment and Transaction records
+    @Test
+    void should_set_createdBy_on_transaction_when_registering_payment() {
+        // Arrange
+        WalletAccount wallet = WalletAccount.reconstitute(USER_ID, new BigDecimal("200.00"), 0L);
+        SystemConfigData config = SystemConfigData.builder()
+                .commissionPercent(new BigDecimal("10.00"))
+                .build();
+        RegisterPaymentCommand command = buildCommand();
+        PaymentData savedPayment = buildSavedPayment();
+        RequesterContext requester = RequesterContext.of(REQUESTER_ID, Set.of("CONGRESS_ADMIN"));
+
+        given(paymentRepository.findByIdempotencyKey(IDEMPOTENCY_KEY)).willReturn(Optional.empty());
+        given(walletRepository.findByUserId(USER_ID)).willReturn(Optional.of(wallet));
+        given(configRepository.find()).willReturn(config);
+        given(walletRepository.save(any())).willReturn(wallet);
+        given(paymentRepository.save(any())).willReturn(savedPayment);
+        given(transactionRepository.save(any())).willReturn(TransactionData.builder().build());
+        given(paymentMapper.toResponse(any())).willReturn(PaymentResponse.builder().build());
+
+        // Act
+        useCase.execute(command, IDEMPOTENCY_KEY, requester);
+
+        // Assert — capture the TransactionData argument and verify all fields
+        ArgumentCaptor<TransactionData> txCaptor = ArgumentCaptor.forClass(TransactionData.class);
+        then(transactionRepository).should().save(txCaptor.capture());
+
+        TransactionData savedTx = txCaptor.getValue();
+        assertThat(savedTx.getCreatedBy()).isEqualTo(REQUESTER_ID);
+        assertThat(savedTx.getType()).isEqualTo(TransactionType.PAYMENT);
+        assertThat(savedTx.getAmount()).isNegative();
+        assertThat(savedTx.getReferencePaymentId()).isNotNull();
+        assertThat(savedTx.getTransactionDate()).isEqualTo(command.getPaymentDate());
+    }
+
+    @Test
+    void should_set_createdBy_on_payment_record_when_registering() {
+        // Arrange
+        WalletAccount wallet = WalletAccount.reconstitute(USER_ID, new BigDecimal("200.00"), 0L);
+        SystemConfigData config = SystemConfigData.builder()
+                .commissionPercent(new BigDecimal("10.00"))
+                .build();
+        RegisterPaymentCommand command = buildCommand();
+        PaymentData savedPayment = buildSavedPayment();
+        RequesterContext requester = RequesterContext.of(REQUESTER_ID, Set.of("CONGRESS_ADMIN"));
+
+        given(paymentRepository.findByIdempotencyKey(IDEMPOTENCY_KEY)).willReturn(Optional.empty());
+        given(walletRepository.findByUserId(USER_ID)).willReturn(Optional.of(wallet));
+        given(configRepository.find()).willReturn(config);
+        given(walletRepository.save(any())).willReturn(wallet);
+        given(paymentRepository.save(any())).willReturn(savedPayment);
+        given(transactionRepository.save(any())).willReturn(TransactionData.builder().build());
+        given(paymentMapper.toResponse(any())).willReturn(PaymentResponse.builder().build());
+
+        // Act
+        useCase.execute(command, IDEMPOTENCY_KEY, requester);
+
+        // Assert — capture the PaymentData argument and verify createdBy
+        ArgumentCaptor<PaymentData> paymentCaptor = ArgumentCaptor.forClass(PaymentData.class);
+        then(paymentRepository).should().save(paymentCaptor.capture());
+
+        PaymentData capturedPayment = paymentCaptor.getValue();
+        assertThat(capturedPayment.getCreatedBy()).isEqualTo(REQUESTER_ID);
+    }
+
     @Test
     void should_register_payment_and_debit_wallet_when_valid_request() {
         WalletAccount wallet = WalletAccount.reconstitute(USER_ID, new BigDecimal("200.00"), 0L);
         SystemConfigData config = SystemConfigData.builder()
                 .commissionPercent(new BigDecimal("10.00"))
                 .build();
-
-        RegisterPaymentRequest request = RegisterPaymentRequest.builder()
-                .userId(USER_ID)
-                .congressId(CONGRESS_ID)
-                .institutionId(INSTITUTION_ID)
-                .congressNameSnapshot("Test Congress")
-                .institutionNameSnapshot("Test Institution")
-                .amount(new BigDecimal("100.00"))
-                .paymentDate(LocalDate.of(2026, 5, 20))
-                .build();
-
-        PaymentData savedPayment = PaymentData.builder()
-                .id(UUID.randomUUID())
-                .userId(USER_ID)
-                .congressId(CONGRESS_ID)
-                .institutionId(INSTITUTION_ID)
-                .congressNameSnapshot("Test Congress")
-                .institutionNameSnapshot("Test Institution")
-                .commissionPercentSnapshot(new BigDecimal("10.00"))
-                .amount(new BigDecimal("100.00"))
-                .commissionAmount(new BigDecimal("10.00"))
-                .netAmount(new BigDecimal("90.00"))
-                .paymentDate(LocalDate.of(2026, 5, 20))
-                .idempotencyKey(IDEMPOTENCY_KEY)
-                .createdBy(CREATED_BY)
-                .build();
+        RegisterPaymentCommand command = buildCommand();
+        PaymentData savedPayment = buildSavedPayment();
+        RequesterContext requester = RequesterContext.of(REQUESTER_ID, Set.of("CONGRESS_ADMIN"));
 
         PaymentResponse expectedResponse = PaymentResponse.builder()
                 .amount(new BigDecimal("100.00"))
@@ -112,7 +158,7 @@ class RegisterPaymentUseCaseTest {
         given(paymentRepository.save(any())).willReturn(savedPayment);
         given(paymentMapper.toResponse(any())).willReturn(expectedResponse);
 
-        PaymentResponse result = useCase.execute(request, IDEMPOTENCY_KEY, CREATED_BY);
+        PaymentResponse result = useCase.execute(command, IDEMPOTENCY_KEY, requester);
 
         assertThat(result.getAmount()).isEqualByComparingTo("100.00");
         assertThat(result.getCommissionAmount()).isEqualByComparingTo("10.00");
@@ -124,33 +170,16 @@ class RegisterPaymentUseCaseTest {
 
     @Test
     void should_return_existing_payment_when_idempotency_key_already_used() {
-        PaymentData existingPayment = PaymentData.builder()
-                .id(UUID.randomUUID())
-                .userId(USER_ID)
-                .amount(new BigDecimal("100.00"))
-                .commissionAmount(new BigDecimal("10.00"))
-                .netAmount(new BigDecimal("90.00"))
-                .idempotencyKey(IDEMPOTENCY_KEY)
-                .build();
-
+        PaymentData existingPayment = buildSavedPayment();
         PaymentResponse expectedResponse = PaymentResponse.builder()
                 .amount(new BigDecimal("100.00"))
                 .build();
-
-        RegisterPaymentRequest request = RegisterPaymentRequest.builder()
-                .userId(USER_ID)
-                .congressId(CONGRESS_ID)
-                .institutionId(INSTITUTION_ID)
-                .congressNameSnapshot("Test Congress")
-                .institutionNameSnapshot("Test Institution")
-                .amount(new BigDecimal("100.00"))
-                .paymentDate(LocalDate.of(2026, 5, 20))
-                .build();
+        RequesterContext requester = RequesterContext.of(REQUESTER_ID, Set.of("CONGRESS_ADMIN"));
 
         given(paymentRepository.findByIdempotencyKey(IDEMPOTENCY_KEY)).willReturn(Optional.of(existingPayment));
         given(paymentMapper.toResponse(existingPayment)).willReturn(expectedResponse);
 
-        PaymentResponse result = useCase.execute(request, IDEMPOTENCY_KEY, CREATED_BY);
+        PaymentResponse result = useCase.execute(buildCommand(), IDEMPOTENCY_KEY, requester);
 
         assertThat(result.getAmount()).isEqualByComparingTo("100.00");
         then(walletRepository).should(never()).findByUserId(any());
@@ -165,28 +194,31 @@ class RegisterPaymentUseCaseTest {
         SystemConfigData config = SystemConfigData.builder()
                 .commissionPercent(new BigDecimal("10.00"))
                 .build();
-
-        RegisterPaymentRequest request = RegisterPaymentRequest.builder()
-                .userId(USER_ID)
-                .congressId(CONGRESS_ID)
-                .institutionId(INSTITUTION_ID)
-                .congressNameSnapshot("Test Congress")
-                .institutionNameSnapshot("Test Institution")
-                .amount(new BigDecimal("100.00"))
-                .paymentDate(LocalDate.of(2026, 5, 20))
-                .build();
+        RequesterContext requester = RequesterContext.of(REQUESTER_ID, Set.of("CONGRESS_ADMIN"));
 
         given(paymentRepository.findByIdempotencyKey(IDEMPOTENCY_KEY)).willReturn(Optional.empty());
         given(walletRepository.findByUserId(USER_ID)).willReturn(Optional.of(wallet));
         given(configRepository.find()).willReturn(config);
 
         assertThrows(InsufficientFundsException.class,
-                () -> useCase.execute(request, IDEMPOTENCY_KEY, CREATED_BY));
+                () -> useCase.execute(buildCommand(), IDEMPOTENCY_KEY, requester));
     }
 
     @Test
     void should_throw_when_wallet_not_found() {
-        RegisterPaymentRequest request = RegisterPaymentRequest.builder()
+        RequesterContext requester = RequesterContext.of(REQUESTER_ID, Set.of("CONGRESS_ADMIN"));
+
+        given(paymentRepository.findByIdempotencyKey(IDEMPOTENCY_KEY)).willReturn(Optional.empty());
+        given(walletRepository.findByUserId(USER_ID)).willReturn(Optional.empty());
+
+        assertThrows(ApiException.class,
+                () -> useCase.execute(buildCommand(), IDEMPOTENCY_KEY, requester));
+    }
+
+    // --- helpers ---
+
+    private RegisterPaymentCommand buildCommand() {
+        return RegisterPaymentCommand.builder()
                 .userId(USER_ID)
                 .congressId(CONGRESS_ID)
                 .institutionId(INSTITUTION_ID)
@@ -195,11 +227,23 @@ class RegisterPaymentUseCaseTest {
                 .amount(new BigDecimal("100.00"))
                 .paymentDate(LocalDate.of(2026, 5, 20))
                 .build();
+    }
 
-        given(paymentRepository.findByIdempotencyKey(IDEMPOTENCY_KEY)).willReturn(Optional.empty());
-        given(walletRepository.findByUserId(USER_ID)).willReturn(Optional.empty());
-
-        assertThrows(ApiException.class,
-                () -> useCase.execute(request, IDEMPOTENCY_KEY, CREATED_BY));
+    private PaymentData buildSavedPayment() {
+        return PaymentData.builder()
+                .id(UUID.randomUUID())
+                .userId(USER_ID)
+                .congressId(CONGRESS_ID)
+                .institutionId(INSTITUTION_ID)
+                .congressNameSnapshot("Test Congress")
+                .institutionNameSnapshot("Test Institution")
+                .commissionPercentSnapshot(new BigDecimal("10.00"))
+                .amount(new BigDecimal("100.00"))
+                .commissionAmount(new BigDecimal("10.00"))
+                .netAmount(new BigDecimal("90.00"))
+                .paymentDate(LocalDate.of(2026, 5, 20))
+                .idempotencyKey(IDEMPOTENCY_KEY)
+                .createdBy(REQUESTER_ID)
+                .build();
     }
 }

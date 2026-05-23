@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -41,7 +41,7 @@ class SystemConfigRepositoryTest {
         SystemConfigEntity entity = repository.findById(1).orElseThrow();
         entity.setCommissionPercent(new BigDecimal("20.00"));
         entity.setUpdatedBy(UUID.randomUUID());
-        entity.setUpdatedAt(LocalDateTime.now());
+        entity.setUpdatedAt(Instant.now());
 
         repository.saveAndFlush(entity);
 

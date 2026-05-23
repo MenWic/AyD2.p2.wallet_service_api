@@ -1,11 +1,11 @@
 package ayd2.p2b.wallet_service_api.unit.feature.wallet.transactions;
 
 import ayd2.p2b.wallet_service_api.common.response.PageResponse;
-import ayd2.p2b.wallet_service_api.feature.wallet.TransactionRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.wallet.application.port.TransactionRepositoryPort;
 import ayd2.p2b.wallet_service_api.feature.wallet.application.transactions.GetTransactionHistoryUseCase;
 import ayd2.p2b.wallet_service_api.feature.wallet.domain.model.TransactionData;
 import ayd2.p2b.wallet_service_api.feature.wallet.domain.model.TransactionType;
-import ayd2.p2b.wallet_service_api.feature.wallet.dto.request.TransactionFilterRequest;
+import ayd2.p2b.wallet_service_api.feature.wallet.dto.internal.TransactionSearchCriteria;
 import ayd2.p2b.wallet_service_api.feature.wallet.dto.response.TransactionResponse;
 import ayd2.p2b.wallet_service_api.feature.wallet.mapper.WalletMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,7 +42,7 @@ class GetTransactionHistoryUseCaseTest {
     @Test
     void should_return_paged_transactions_when_no_filters() {
         UUID userId = UUID.randomUUID();
-        TransactionFilterRequest filter = TransactionFilterRequest.builder()
+        TransactionSearchCriteria criteria = TransactionSearchCriteria.builder()
                 .page(0)
                 .size(20)
                 .build();
@@ -92,11 +92,11 @@ class GetTransactionHistoryUseCaseTest {
                 .createdAt(Instant.now())
                 .build();
 
-        given(transactionRepositoryPort.findByUserId(userId, filter)).willReturn(dataPage);
+        given(transactionRepositoryPort.findByUserId(userId, criteria)).willReturn(dataPage);
         given(walletMapper.toTransactionResponse(data1)).willReturn(response1);
         given(walletMapper.toTransactionResponse(data2)).willReturn(response2);
 
-        PageResponse<TransactionResponse> result = useCase.execute(userId, filter);
+        PageResponse<TransactionResponse> result = useCase.execute(userId, criteria);
 
         assertThat(result.getItems()).hasSize(2);
         assertThat(result.getTotalItems()).isEqualTo(2);

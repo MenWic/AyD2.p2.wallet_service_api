@@ -1,10 +1,10 @@
 package ayd2.p2b.wallet_service_api.unit.feature.payment.list;
 
 import ayd2.p2b.wallet_service_api.common.response.PageResponse;
-import ayd2.p2b.wallet_service_api.feature.payment.PaymentRepositoryPort;
 import ayd2.p2b.wallet_service_api.feature.payment.application.list.ListPaymentsUseCase;
+import ayd2.p2b.wallet_service_api.feature.payment.application.port.PaymentRepositoryPort;
 import ayd2.p2b.wallet_service_api.feature.payment.domain.model.PaymentData;
-import ayd2.p2b.wallet_service_api.feature.payment.dto.request.PaymentFilterRequest;
+import ayd2.p2b.wallet_service_api.feature.payment.dto.internal.PaymentSearchCriteria;
 import ayd2.p2b.wallet_service_api.feature.payment.dto.response.PaymentResponse;
 import ayd2.p2b.wallet_service_api.feature.payment.mapper.PaymentMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,8 +37,8 @@ class ListPaymentsUseCaseTest {
     }
 
     @Test
-    void should_return_paged_payments_when_called_with_filters() {
-        PaymentFilterRequest filter = PaymentFilterRequest.builder()
+    void should_return_paged_payments_when_called_with_criteria() {
+        PaymentSearchCriteria criteria = PaymentSearchCriteria.builder()
                 .page(0)
                 .size(20)
                 .build();
@@ -64,10 +64,10 @@ class ListPaymentsUseCaseTest {
                 .amount(new BigDecimal("100.00"))
                 .build();
 
-        given(paymentRepository.findAll(filter)).willReturn(dataPage);
+        given(paymentRepository.findAll(criteria)).willReturn(dataPage);
         given(paymentMapper.toResponse(paymentData)).willReturn(paymentResponse);
 
-        PageResponse<PaymentResponse> result = useCase.execute(filter);
+        PageResponse<PaymentResponse> result = useCase.execute(criteria);
 
         assertThat(result.getItems()).hasSize(1);
         assertThat(result.getTotalItems()).isEqualTo(1);

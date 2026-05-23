@@ -25,6 +25,27 @@ class WalletAccountTest {
     }
 
     @Test
+    void should_throw_when_reconstitute_with_null_userId() {
+        assertThatThrownBy(() -> WalletAccount.reconstitute(null, new BigDecimal("100.00"), 0L))
+                .isInstanceOf(DomainException.class)
+                .hasMessageContaining("wallet.user_id_required");
+    }
+
+    @Test
+    void should_throw_when_reconstitute_with_null_balance() {
+        assertThatThrownBy(() -> WalletAccount.reconstitute(USER_ID, null, 0L))
+                .isInstanceOf(DomainException.class)
+                .hasMessageContaining("wallet.balance_required");
+    }
+
+    @Test
+    void should_throw_when_reconstitute_with_negative_balance() {
+        assertThatThrownBy(() -> WalletAccount.reconstitute(USER_ID, new BigDecimal("-0.01"), 0L))
+                .isInstanceOf(DomainException.class)
+                .hasMessageContaining("wallet.balance_must_be_non_negative");
+    }
+
+    @Test
     void should_reconstitute_wallet_with_existing_balance() {
         WalletAccount wallet = WalletAccount.reconstitute(USER_ID, new BigDecimal("150.50"), 3L);
 

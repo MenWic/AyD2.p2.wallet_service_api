@@ -1,8 +1,9 @@
 package ayd2.p2b.wallet_service_api.unit.feature.payment.get;
 
+import ayd2.p2b.wallet_service_api.common.dto.internal.RequesterContext;
 import ayd2.p2b.wallet_service_api.common.exception.ApiException;
-import ayd2.p2b.wallet_service_api.feature.payment.PaymentRepositoryPort;
 import ayd2.p2b.wallet_service_api.feature.payment.application.get.GetPaymentUseCase;
+import ayd2.p2b.wallet_service_api.feature.payment.application.port.PaymentRepositoryPort;
 import ayd2.p2b.wallet_service_api.feature.payment.domain.model.PaymentData;
 import ayd2.p2b.wallet_service_api.feature.payment.dto.response.PaymentResponse;
 import ayd2.p2b.wallet_service_api.feature.payment.mapper.PaymentMapper;
@@ -14,8 +15,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -59,7 +60,8 @@ class GetPaymentUseCaseTest {
         given(paymentRepository.findById(PAYMENT_ID)).willReturn(Optional.of(payment));
         given(paymentMapper.toResponse(payment)).willReturn(expectedResponse);
 
-        PaymentResponse result = useCase.execute(PAYMENT_ID, OWNER_USER_ID, List.of("PARTICIPANT"));
+        RequesterContext requester = RequesterContext.of(OWNER_USER_ID, Set.of("PARTICIPANT"));
+        PaymentResponse result = useCase.execute(PAYMENT_ID, requester);
 
         assertThat(result.getId()).isEqualTo(PAYMENT_ID);
         assertThat(result.getUserId()).isEqualTo(OWNER_USER_ID);
@@ -75,8 +77,9 @@ class GetPaymentUseCaseTest {
 
         given(paymentRepository.findById(PAYMENT_ID)).willReturn(Optional.of(payment));
 
+        RequesterContext requester = RequesterContext.of(OTHER_USER_ID, Set.of("PARTICIPANT"));
         ApiException ex = assertThrows(ApiException.class,
-                () -> useCase.execute(PAYMENT_ID, OTHER_USER_ID, List.of("PARTICIPANT")));
+                () -> useCase.execute(PAYMENT_ID, requester));
 
         assertThat(ex.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(ex.getCode()).isEqualTo("auth.forbidden");
@@ -99,7 +102,8 @@ class GetPaymentUseCaseTest {
         given(paymentRepository.findById(PAYMENT_ID)).willReturn(Optional.of(payment));
         given(paymentMapper.toResponse(payment)).willReturn(expectedResponse);
 
-        PaymentResponse result = useCase.execute(PAYMENT_ID, OTHER_USER_ID, List.of("SYSTEM_ADMIN"));
+        RequesterContext requester = RequesterContext.of(OTHER_USER_ID, Set.of("SYSTEM_ADMIN"));
+        PaymentResponse result = useCase.execute(PAYMENT_ID, requester);
 
         assertThat(result.getId()).isEqualTo(PAYMENT_ID);
     }
@@ -108,8 +112,9 @@ class GetPaymentUseCaseTest {
     void should_throw_not_found_when_payment_does_not_exist() {
         given(paymentRepository.findById(PAYMENT_ID)).willReturn(Optional.empty());
 
+        RequesterContext requester = RequesterContext.of(OWNER_USER_ID, Set.of("PARTICIPANT"));
         ApiException ex = assertThrows(ApiException.class,
-                () -> useCase.execute(PAYMENT_ID, OWNER_USER_ID, List.of("PARTICIPANT")));
+                () -> useCase.execute(PAYMENT_ID, requester));
 
         assertThat(ex.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(ex.getCode()).isEqualTo("resource.not_found");

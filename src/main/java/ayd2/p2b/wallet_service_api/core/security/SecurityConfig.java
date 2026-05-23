@@ -24,9 +24,9 @@ public class SecurityConfig {
     ) {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .httpBasic(AbstractHttpConfigurer::disable) //Ajustar segun requiera wallet_service_api
-                .formLogin(AbstractHttpConfigurer::disable) //Ajustar segun requiera wallet_service_api
-                .logout(AbstractHttpConfigurer::disable) //Ajustar segun requiera wallet_service_api
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .logout(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
@@ -50,6 +50,9 @@ public class SecurityConfig {
         return http.build();
     }
 
+    // Wallet service validates JWTs directly; username/password auth is disabled.
+    // This bean suppresses Spring Boot's auto-configured UserDetailsService and its
+    // generated-password log warning. Do not remove — removing it re-enables the auto-config.
     @Bean
     public org.springframework.security.core.userdetails.UserDetailsService userDetailsService() {
         return username -> {
