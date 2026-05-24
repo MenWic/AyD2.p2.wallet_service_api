@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -33,10 +34,12 @@ public class RegisterPaymentRequest {
     private UUID institutionId;
 
     @NotBlank(message = "congressNameSnapshot is required")
+    @Size(max = 255, message = "congressNameSnapshot must not exceed 255 characters")
     @Schema(description = "Congress name at payment time (immutable snapshot)", required = true)
     private String congressNameSnapshot;
 
     @NotBlank(message = "institutionNameSnapshot is required")
+    @Size(max = 255, message = "institutionNameSnapshot must not exceed 255 characters")
     @Schema(description = "Institution name at payment time (immutable snapshot)", required = true)
     private String institutionNameSnapshot;
 

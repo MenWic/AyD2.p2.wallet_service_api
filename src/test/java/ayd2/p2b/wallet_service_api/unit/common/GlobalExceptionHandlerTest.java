@@ -2,6 +2,7 @@ package ayd2.p2b.wallet_service_api.unit.common;
 
 import ayd2.p2b.wallet_service_api.common.exception.ApiException;
 import ayd2.p2b.wallet_service_api.common.exception.GlobalExceptionHandler;
+import ayd2.p2b.wallet_service_api.feature.wallet.domain.exception.InsufficientFundsException;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -30,6 +31,17 @@ class GlobalExceptionHandlerTest {
 
         assertThat(detail.getStatus()).isEqualTo(403);
         assertThat(detail.getProperties()).containsEntry("code", "auth.forbidden");
+    }
+
+    // [RED] InsufficientFundsException must map to 422 with code
+    // wallet.insufficient_funds
+    @Test
+    void should_return_422_with_wallet_insufficient_funds_code() {
+        InsufficientFundsException ex = new InsufficientFundsException();
+        ProblemDetail detail = handler.handleInsufficientFunds(ex);
+
+        assertThat(detail.getStatus()).isEqualTo(422);
+        assertThat(detail.getProperties()).containsEntry("code", "wallet.insufficient_funds");
     }
 
     @Test
@@ -67,8 +79,8 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void should_return_409_for_optimistic_locking_failure() {
-        ObjectOptimisticLockingFailureException ex =
-                new ObjectOptimisticLockingFailureException("WalletEntity", new RuntimeException());
+        ObjectOptimisticLockingFailureException ex = new ObjectOptimisticLockingFailureException("WalletEntity",
+                new RuntimeException());
         ProblemDetail detail = handler.handleOptimisticLock(ex);
 
         assertThat(detail.getStatus()).isEqualTo(409);
@@ -77,8 +89,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void should_return_409_for_data_integrity_violation() {
-        DataIntegrityViolationException ex =
-                new DataIntegrityViolationException("unique constraint violation");
+        DataIntegrityViolationException ex = new DataIntegrityViolationException("unique constraint violation");
         ProblemDetail detail = handler.handleDataIntegrity(ex);
 
         assertThat(detail.getStatus()).isEqualTo(409);
@@ -92,4 +103,5 @@ class GlobalExceptionHandlerTest {
         assertThat(detail.getStatus()).isEqualTo(500);
         assertThat(detail.getProperties()).containsEntry("code", "system.internal_error");
     }
+
 }
