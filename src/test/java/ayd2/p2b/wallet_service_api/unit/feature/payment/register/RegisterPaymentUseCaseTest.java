@@ -322,6 +322,46 @@ class RegisterPaymentUseCaseTest {
                 assertThat(ex.getCode()).isEqualTo("resource.conflict");
         }
 
+        @Test
+        void same_key_with_whitespace_padded_snapshots_returns_replay() {
+                // Arrange: existing payment stored with trimmed snapshots
+                UUID paymentId = UUID.fromString("00000000-0000-0000-0000-000000000010");
+                PaymentData existing = PaymentData.builder()
+                                .id(paymentId)
+                                .userId(USER_ID)
+                                .congressId(CONGRESS_ID)
+                                .institutionId(INSTITUTION_ID)
+                                .congressNameSnapshot("Test Congress")
+                                .institutionNameSnapshot("Test Institution")
+                                .amount(new BigDecimal("100.00"))
+                                .paymentDate(LocalDate.of(2026, 5, 20))
+                                .idempotencyKey(IDEMPOTENCY_KEY)
+                                .build();
+                given(paymentRepository.findByIdempotencyKey(IDEMPOTENCY_KEY)).willReturn(Optional.of(existing));
+                given(paymentMapper.toResponse(existing)).willReturn(PaymentResponse.builder().id(paymentId).build());
+
+                // Command with whitespace-padded snapshots
+                RegisterPaymentCommand cmd = RegisterPaymentCommand.builder()
+                                .userId(USER_ID)
+                                .congressId(CONGRESS_ID)
+                                .institutionId(INSTITUTION_ID)
+                                .congressNameSnapshot("  Test Congress  ")
+                                .institutionNameSnapshot("  Test Institution  ")
+                                .amount(new BigDecimal("100.00"))
+                                .paymentDate(LocalDate.of(2026, 5, 20))
+                                .build();
+
+                RequesterContext requester = RequesterContext.of(USER_ID, Set.of("PARTICIPANT"));
+
+                // Act
+                RegisterPaymentResult result = useCase.execute(cmd, IDEMPOTENCY_KEY, requester);
+
+                // Assert: treated as replay, not conflict
+                assertThat(result.isReplay()).isTrue();
+                then(walletRepository).shouldHaveNoInteractions();
+                then(transactionRepository).shouldHaveNoInteractions();
+        }
+
         // --- helpers ---
 
         private RegisterPaymentCommand buildCommand() {
