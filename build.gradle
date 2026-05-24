@@ -60,6 +60,7 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-test'
     testImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
 
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.testcontainers:junit-jupiter:1.21.4'
     testImplementation 'org.testcontainers:postgresql:1.21.4'
 
@@ -72,23 +73,34 @@ jacoco {
     toolVersion = '0.8.13'
 }
 
+def skipPersistenceTests = providers.gradleProperty('skipPersistenceTests').map { it.toBoolean() }.getOrElse(false)
+
 def jacocoExclusions = [
         '**/config/**',
         '**/*Application*',
         '**/dto/**',
-        '**/*MapperImpl*'
+        '**/*MapperImpl*',
+        '**/openapi/**',
+        '**/core/security/**'
 ]
+
+if (skipPersistenceTests) {
+    jacocoExclusions += ['**/infrastructure/persistence/adapter/**']
+}
 
 def jacocoFilteredDirectories = { fileCollection ->
     files(fileCollection.files.collect { fileTree(dir: it, exclude: jacocoExclusions) })
 }
 
-def skipPersistenceTests = providers.gradleProperty('skipPersistenceTests').map { it.toBoolean() }.getOrElse(false)
-
 tasks.named('test') {
     useJUnitPlatform()
     if (skipPersistenceTests) {
         exclude '**/integration/persistence/**'
+        exclude '**/WalletServiceApiApplicationTests*'
+    }
+    testLogging {
+        events 'passed', 'failed', 'skipped'
+        showStandardStreams = false
     }
     finalizedBy tasks.named('jacocoTestReport')
 }
@@ -121,4 +133,8 @@ tasks.named('jacocoTestCoverageVerification') {
 
 tasks.named('check') {
     dependsOn tasks.named('jacocoTestCoverageVerification')
+}
+
+tasks.bootJar {
+   archiveFileName.set("application.jar")
 }
