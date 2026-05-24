@@ -28,11 +28,19 @@ public class GlobalExceptionHandler {
         return detail;
     }
 
+    @ExceptionHandler(ayd2.p2b.wallet_service_api.feature.wallet.domain.exception.InsufficientFundsException.class)
+    public ProblemDetail handleInsufficientFunds(
+            ayd2.p2b.wallet_service_api.feature.wallet.domain.exception.InsufficientFundsException ex) {
+        ProblemDetail detail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        detail.setProperty("code", "wallet.insufficient_funds");
+        return detail;
+    }
+
     @ExceptionHandler(DomainException.class)
     public ProblemDetail handleDomainException(DomainException ex) {
         ProblemDetail detail = ProblemDetail.forStatusAndDetail(
-                HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage()
-        );
+                HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
         detail.setProperty("code", "domain.invariant_violated");
         return detail;
     }
@@ -48,8 +56,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleValidation(MethodArgumentNotValidException ex) {
         ProblemDetail detail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.BAD_REQUEST,
-                "Validation failed"
-        );
+                "Validation failed");
         detail.setProperty("code", "validation.failed");
         detail.setProperty("errors", fieldErrors(ex));
         return detail;
@@ -59,8 +66,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleConstraintViolation(ConstraintViolationException ex) {
         ProblemDetail detail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.BAD_REQUEST,
-                "Validation failed"
-        );
+                "Validation failed");
         detail.setProperty("code", "validation.failed");
         return detail;
     }
