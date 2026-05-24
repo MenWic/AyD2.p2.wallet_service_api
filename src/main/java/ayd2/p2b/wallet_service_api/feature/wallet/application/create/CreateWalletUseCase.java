@@ -1,6 +1,6 @@
 package ayd2.p2b.wallet_service_api.feature.wallet.application.create;
 
-import ayd2.p2b.wallet_service_api.feature.wallet.WalletRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.wallet.application.port.WalletRepositoryPort;
 import ayd2.p2b.wallet_service_api.feature.wallet.domain.model.WalletAccount;
 import ayd2.p2b.wallet_service_api.feature.wallet.dto.response.WalletBalanceResponse;
 import ayd2.p2b.wallet_service_api.feature.wallet.mapper.WalletMapper;

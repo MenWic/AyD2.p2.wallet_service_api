@@ -26,6 +26,9 @@ public class WalletAccount {
     }
 
     public static WalletAccount reconstitute(UUID userId, BigDecimal balance, long version) {
+        if (userId == null) throw new DomainException("wallet.user_id_required");
+        if (balance == null) throw new DomainException("wallet.balance_required");
+        if (balance.compareTo(BigDecimal.ZERO) < 0) throw new DomainException("wallet.balance_must_be_non_negative");
         return new WalletAccount(userId, balance, version);
     }
 

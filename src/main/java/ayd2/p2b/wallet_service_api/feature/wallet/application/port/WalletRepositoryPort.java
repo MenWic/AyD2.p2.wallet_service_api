@@ -1,4 +1,4 @@
-package ayd2.p2b.wallet_service_api.feature.wallet;
+package ayd2.p2b.wallet_service_api.feature.wallet.application.port;
 
 import ayd2.p2b.wallet_service_api.feature.wallet.domain.model.WalletAccount;
 

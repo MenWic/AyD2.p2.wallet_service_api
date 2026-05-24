@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Data
@@ -23,6 +23,6 @@ public class SystemConfigResponse {
     @Schema(description = "UUID of the admin who last updated this configuration")
     private UUID updatedBy;
 
-    @Schema(description = "Timestamp of the last update")
-    private LocalDateTime updatedAt;
+    @Schema(description = "Timestamp of the last update (ISO 8601 UTC)")
+    private Instant updatedAt;
 }

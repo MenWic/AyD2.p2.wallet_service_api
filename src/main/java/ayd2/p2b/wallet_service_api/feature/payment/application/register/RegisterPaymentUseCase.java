@@ -1,14 +1,15 @@
 package ayd2.p2b.wallet_service_api.feature.payment.application.register;
 
+import ayd2.p2b.wallet_service_api.common.dto.internal.RequesterContext;
 import ayd2.p2b.wallet_service_api.common.exception.ApiException;
-import ayd2.p2b.wallet_service_api.feature.payment.PaymentRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.payment.application.port.PaymentRepositoryPort;
 import ayd2.p2b.wallet_service_api.feature.payment.domain.model.PaymentData;
-import ayd2.p2b.wallet_service_api.feature.payment.dto.request.RegisterPaymentRequest;
+import ayd2.p2b.wallet_service_api.feature.payment.dto.internal.RegisterPaymentCommand;
 import ayd2.p2b.wallet_service_api.feature.payment.dto.response.PaymentResponse;
 import ayd2.p2b.wallet_service_api.feature.payment.mapper.PaymentMapper;
-import ayd2.p2b.wallet_service_api.feature.systemconfig.SystemConfigRepositoryPort;
-import ayd2.p2b.wallet_service_api.feature.wallet.TransactionRepositoryPort;
-import ayd2.p2b.wallet_service_api.feature.wallet.WalletRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.systemconfig.application.port.SystemConfigRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.wallet.application.port.TransactionRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.wallet.application.port.WalletRepositoryPort;
 import ayd2.p2b.wallet_service_api.feature.wallet.domain.model.TransactionData;
 import ayd2.p2b.wallet_service_api.feature.wallet.domain.model.TransactionType;
 import ayd2.p2b.wallet_service_api.feature.wallet.domain.model.WalletAccount;
@@ -33,43 +34,44 @@ public class RegisterPaymentUseCase {
     private final PaymentMapper paymentMapper;
 
     @Transactional
-    public PaymentResponse execute(RegisterPaymentRequest request, String idempotencyKey, UUID createdBy) {
+    public RegisterPaymentResult execute(RegisterPaymentCommand command, String idempotencyKey, RequesterContext requester) {
         return paymentRepository.findByIdempotencyKey(idempotencyKey)
-                .map(paymentMapper::toResponse)
-                .orElseGet(() -> registerNew(request, idempotencyKey, createdBy));
+                .map(existing -> RegisterPaymentResult.replay(paymentMapper.toResponse(existing)))
+                .orElseGet(() -> RegisterPaymentResult.newPayment(registerNew(command, idempotencyKey, requester)));
     }
 
-    private PaymentResponse registerNew(RegisterPaymentRequest request, String idempotencyKey, UUID createdBy) {
-        WalletAccount wallet = walletRepository.findByUserId(request.getUserId())
+    private PaymentResponse registerNew(RegisterPaymentCommand command, String idempotencyKey,
+            RequesterContext requester) {
+        WalletAccount wallet = walletRepository.findByUserId(command.getUserId())
                 .orElseThrow(() -> new ApiException(
                         HttpStatus.NOT_FOUND,
                         "resource.not_found",
-                        "Wallet not found for user: " + request.getUserId()
+                        "Wallet not found for user: " + command.getUserId()
                 ));
 
         BigDecimal commissionPercent = configRepository.find().getCommissionPercent();
-        BigDecimal commissionAmount = request.getAmount()
+        BigDecimal commissionAmount = command.getAmount()
                 .multiply(commissionPercent)
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-        BigDecimal netAmount = request.getAmount().subtract(commissionAmount);
+        BigDecimal netAmount = command.getAmount().subtract(commissionAmount);
 
-        wallet.debit(request.getAmount());
+        wallet.debit(command.getAmount());
         walletRepository.save(wallet);
 
         PaymentData paymentData = PaymentData.builder()
                 .id(UUID.randomUUID())
-                .userId(request.getUserId())
-                .congressId(request.getCongressId())
-                .institutionId(request.getInstitutionId())
-                .congressNameSnapshot(request.getCongressNameSnapshot())
-                .institutionNameSnapshot(request.getInstitutionNameSnapshot())
+                .userId(command.getUserId())
+                .congressId(command.getCongressId())
+                .institutionId(command.getInstitutionId())
+                .congressNameSnapshot(command.getCongressNameSnapshot())
+                .institutionNameSnapshot(command.getInstitutionNameSnapshot())
                 .commissionPercentSnapshot(commissionPercent)
-                .amount(request.getAmount())
+                .amount(command.getAmount())
                 .commissionAmount(commissionAmount)
                 .netAmount(netAmount)
-                .paymentDate(request.getPaymentDate())
+                .paymentDate(command.getPaymentDate())
                 .idempotencyKey(idempotencyKey)
-                .createdBy(createdBy)
+                .createdBy(requester.getUserId())
                 .createdAt(Instant.now())
                 .build();
 
@@ -77,11 +79,12 @@ public class RegisterPaymentUseCase {
 
         TransactionData transaction = TransactionData.builder()
                 .id(UUID.randomUUID())
-                .walletUserId(request.getUserId())
+                .walletUserId(command.getUserId())
                 .type(TransactionType.PAYMENT)
-                .amount(request.getAmount().negate())
-                .transactionDate(request.getPaymentDate())
+                .amount(command.getAmount().negate())
+                .transactionDate(command.getPaymentDate())
                 .referencePaymentId(savedPayment.getId())
+                .createdBy(requester.getUserId())
                 .createdAt(Instant.now())
                 .build();
 

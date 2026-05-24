@@ -1,12 +1,13 @@
 package ayd2.p2b.wallet_service_api.feature.payment.infrastructure.persistence.adapter;
 
 import ayd2.p2b.wallet_service_api.common.response.PageResponse;
-import ayd2.p2b.wallet_service_api.feature.payment.PaymentRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.payment.application.port.PaymentRepositoryPort;
 import ayd2.p2b.wallet_service_api.feature.payment.domain.model.PaymentData;
-import ayd2.p2b.wallet_service_api.feature.payment.dto.request.PaymentFilterRequest;
+import ayd2.p2b.wallet_service_api.feature.payment.dto.internal.PaymentSearchCriteria;
 import ayd2.p2b.wallet_service_api.feature.payment.infrastructure.persistence.entity.PaymentEntity;
 import ayd2.p2b.wallet_service_api.feature.payment.infrastructure.persistence.repository.PaymentJpaRepository;
 import ayd2.p2b.wallet_service_api.feature.payment.infrastructure.persistence.specification.PaymentSpecification;
+import ayd2.p2b.wallet_service_api.feature.payment.mapper.PaymentMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -22,37 +23,38 @@ import java.util.UUID;
 public class PaymentRepositoryAdapter implements PaymentRepositoryPort {
 
     private final PaymentJpaRepository jpaRepository;
+    private final PaymentMapper paymentMapper;
 
     @Override
     public PaymentData save(PaymentData payment) {
-        PaymentEntity entity = toEntity(payment);
+        PaymentEntity entity = paymentMapper.toEntity(payment);
         PaymentEntity saved = jpaRepository.save(entity);
-        return toDomain(saved);
+        return paymentMapper.toDomain(saved);
     }
 
     @Override
     public Optional<PaymentData> findById(UUID id) {
-        return jpaRepository.findById(id).map(this::toDomain);
+        return jpaRepository.findById(id).map(paymentMapper::toDomain);
     }
 
     @Override
     public Optional<PaymentData> findByIdempotencyKey(String key) {
-        return jpaRepository.findByIdempotencyKey(key).map(this::toDomain);
+        return jpaRepository.findByIdempotencyKey(key).map(paymentMapper::toDomain);
     }
 
     @Override
-    public PageResponse<PaymentData> findAll(PaymentFilterRequest filter) {
+    public PageResponse<PaymentData> findAll(PaymentSearchCriteria criteria) {
         Specification<PaymentEntity> spec = Specification
-                .where(PaymentSpecification.withCongressId(filter.getCongressId()))
-                .and(PaymentSpecification.withInstitutionId(filter.getInstitutionId()))
-                .and(PaymentSpecification.fromDate(filter.getDateFrom()))
-                .and(PaymentSpecification.toDate(filter.getDateTo()));
+                .where(PaymentSpecification.withCongressId(criteria.getCongressId()))
+                .and(PaymentSpecification.withInstitutionId(criteria.getInstitutionId()))
+                .and(PaymentSpecification.fromDate(criteria.getDateFrom()))
+                .and(PaymentSpecification.toDate(criteria.getDateTo()));
 
-        PageRequest pageable = PageRequest.of(filter.getPage(), filter.getSize());
+        PageRequest pageable = PageRequest.of(criteria.getPage(), criteria.getSize());
         Page<PaymentEntity> page = jpaRepository.findAll(spec, pageable);
 
         List<PaymentData> items = page.getContent().stream()
-                .map(this::toDomain)
+                .map(paymentMapper::toDomain)
                 .toList();
 
         return PageResponse.<PaymentData>builder()
@@ -61,44 +63,6 @@ public class PaymentRepositoryAdapter implements PaymentRepositoryPort {
                 .size(page.getSize())
                 .totalItems(page.getTotalElements())
                 .totalPages(page.getTotalPages())
-                .build();
-    }
-
-    private PaymentEntity toEntity(PaymentData data) {
-        PaymentEntity entity = new PaymentEntity();
-        entity.setId(data.getId());
-        entity.setUserId(data.getUserId());
-        entity.setCongressId(data.getCongressId());
-        entity.setInstitutionId(data.getInstitutionId());
-        entity.setCongressNameSnapshot(data.getCongressNameSnapshot());
-        entity.setInstitutionNameSnapshot(data.getInstitutionNameSnapshot());
-        entity.setCommissionPercentSnapshot(data.getCommissionPercentSnapshot());
-        entity.setAmount(data.getAmount());
-        entity.setCommissionAmount(data.getCommissionAmount());
-        entity.setNetAmount(data.getNetAmount());
-        entity.setPaymentDate(data.getPaymentDate());
-        entity.setIdempotencyKey(data.getIdempotencyKey());
-        entity.setCreatedBy(data.getCreatedBy());
-        entity.setCreatedAt(data.getCreatedAt());
-        return entity;
-    }
-
-    private PaymentData toDomain(PaymentEntity entity) {
-        return PaymentData.builder()
-                .id(entity.getId())
-                .userId(entity.getUserId())
-                .congressId(entity.getCongressId())
-                .institutionId(entity.getInstitutionId())
-                .congressNameSnapshot(entity.getCongressNameSnapshot())
-                .institutionNameSnapshot(entity.getInstitutionNameSnapshot())
-                .commissionPercentSnapshot(entity.getCommissionPercentSnapshot())
-                .amount(entity.getAmount())
-                .commissionAmount(entity.getCommissionAmount())
-                .netAmount(entity.getNetAmount())
-                .paymentDate(entity.getPaymentDate())
-                .idempotencyKey(entity.getIdempotencyKey())
-                .createdBy(entity.getCreatedBy())
-                .createdAt(entity.getCreatedAt())
                 .build();
     }
 }

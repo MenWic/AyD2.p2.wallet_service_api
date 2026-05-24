@@ -1,8 +1,8 @@
 package ayd2.p2b.wallet_service_api.unit.feature.systemconfig.get;
 
 import ayd2.p2b.wallet_service_api.common.exception.ApiException;
-import ayd2.p2b.wallet_service_api.feature.systemconfig.SystemConfigData;
-import ayd2.p2b.wallet_service_api.feature.systemconfig.SystemConfigRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.systemconfig.dto.internal.SystemConfigData;
+import ayd2.p2b.wallet_service_api.feature.systemconfig.application.port.SystemConfigRepositoryPort;
 import ayd2.p2b.wallet_service_api.feature.systemconfig.application.get.GetSystemConfigUseCase;
 import ayd2.p2b.wallet_service_api.feature.systemconfig.dto.response.SystemConfigResponse;
 import ayd2.p2b.wallet_service_api.feature.systemconfig.mapper.SystemConfigMapper;
@@ -14,7 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,7 +43,7 @@ class GetSystemConfigUseCaseTest {
         SystemConfigData data = SystemConfigData.builder()
                 .commissionPercent(new BigDecimal("10.00"))
                 .updatedBy(UUID.randomUUID())
-                .updatedAt(LocalDateTime.now())
+                .updatedAt(Instant.now())
                 .build();
         SystemConfigResponse expected = SystemConfigResponse.builder()
                 .commissionPercent(new BigDecimal("10.00"))

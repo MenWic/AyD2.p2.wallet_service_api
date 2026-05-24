@@ -22,6 +22,9 @@ public class TransactionResponse {
     @Schema(description = "Transaction ID")
     private UUID id;
 
+    @Schema(description = "ID of the wallet owner")
+    private UUID walletUserId;
+
     @Schema(description = "Transaction type: TOP_UP or PAYMENT")
     private TransactionType type;
 

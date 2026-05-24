@@ -1,7 +1,7 @@
 package ayd2.p2b.wallet_service_api.unit.feature.systemconfig.update;
 
-import ayd2.p2b.wallet_service_api.feature.systemconfig.SystemConfigData;
-import ayd2.p2b.wallet_service_api.feature.systemconfig.SystemConfigRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.systemconfig.dto.internal.SystemConfigData;
+import ayd2.p2b.wallet_service_api.feature.systemconfig.application.port.SystemConfigRepositoryPort;
 import ayd2.p2b.wallet_service_api.feature.systemconfig.application.update.UpdateSystemConfigUseCase;
 import ayd2.p2b.wallet_service_api.feature.systemconfig.dto.response.SystemConfigResponse;
 import ayd2.p2b.wallet_service_api.feature.systemconfig.mapper.SystemConfigMapper;
@@ -12,7 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,7 +42,7 @@ class UpdateSystemConfigUseCaseTest {
         SystemConfigData saved = SystemConfigData.builder()
                 .commissionPercent(newPercent)
                 .updatedBy(adminId)
-                .updatedAt(LocalDateTime.now())
+                .updatedAt(Instant.now())
                 .build();
         SystemConfigResponse expected = SystemConfigResponse.builder()
                 .commissionPercent(newPercent)
@@ -65,7 +65,7 @@ class UpdateSystemConfigUseCaseTest {
         SystemConfigData data = SystemConfigData.builder()
                 .commissionPercent(percent)
                 .updatedBy(adminId)
-                .updatedAt(LocalDateTime.now())
+                .updatedAt(Instant.now())
                 .build();
         SystemConfigResponse response = SystemConfigResponse.builder()
                 .commissionPercent(percent)
@@ -85,7 +85,7 @@ class UpdateSystemConfigUseCaseTest {
         SystemConfigData data = SystemConfigData.builder()
                 .commissionPercent(maxPercent)
                 .updatedBy(adminId)
-                .updatedAt(LocalDateTime.now())
+                .updatedAt(Instant.now())
                 .build();
         SystemConfigResponse response = SystemConfigResponse.builder()
                 .commissionPercent(maxPercent)

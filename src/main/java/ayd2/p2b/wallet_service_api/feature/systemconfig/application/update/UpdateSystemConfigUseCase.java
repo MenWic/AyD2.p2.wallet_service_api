@@ -1,6 +1,6 @@
 package ayd2.p2b.wallet_service_api.feature.systemconfig.application.update;
 
-import ayd2.p2b.wallet_service_api.feature.systemconfig.SystemConfigRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.systemconfig.application.port.SystemConfigRepositoryPort;
 import ayd2.p2b.wallet_service_api.feature.systemconfig.dto.response.SystemConfigResponse;
 import ayd2.p2b.wallet_service_api.feature.systemconfig.mapper.SystemConfigMapper;
 import lombok.RequiredArgsConstructor;

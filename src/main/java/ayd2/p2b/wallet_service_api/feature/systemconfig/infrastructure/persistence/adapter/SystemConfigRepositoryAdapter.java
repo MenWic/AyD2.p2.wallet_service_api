@@ -1,8 +1,8 @@
 package ayd2.p2b.wallet_service_api.feature.systemconfig.infrastructure.persistence.adapter;
 
 import ayd2.p2b.wallet_service_api.common.exception.ApiException;
-import ayd2.p2b.wallet_service_api.feature.systemconfig.SystemConfigData;
-import ayd2.p2b.wallet_service_api.feature.systemconfig.SystemConfigRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.systemconfig.dto.internal.SystemConfigData;
+import ayd2.p2b.wallet_service_api.feature.systemconfig.application.port.SystemConfigRepositoryPort;
 import ayd2.p2b.wallet_service_api.feature.systemconfig.infrastructure.persistence.entity.SystemConfigEntity;
 import ayd2.p2b.wallet_service_api.feature.systemconfig.infrastructure.persistence.repository.SystemConfigJpaRepository;
 import ayd2.p2b.wallet_service_api.feature.systemconfig.mapper.SystemConfigMapper;
@@ -11,7 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Component
@@ -44,7 +44,7 @@ public class SystemConfigRepositoryAdapter implements SystemConfigRepositoryPort
                 ));
         entity.setCommissionPercent(commissionPercent);
         entity.setUpdatedBy(updatedBy);
-        entity.setUpdatedAt(LocalDateTime.now());
+        entity.setUpdatedAt(Instant.now());
         return mapper.toData(jpaRepository.save(entity));
     }
 }

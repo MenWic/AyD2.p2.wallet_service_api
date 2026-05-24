@@ -4,8 +4,10 @@ import ayd2.p2b.wallet_service_api.common.exception.ApiException;
 import ayd2.p2b.wallet_service_api.common.exception.GlobalExceptionHandler;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
@@ -61,6 +63,26 @@ class GlobalExceptionHandlerTest {
 
         assertThat(detail.getStatus()).isEqualTo(400);
         assertThat(detail.getProperties()).containsEntry("code", "validation.failed");
+    }
+
+    @Test
+    void should_return_409_for_optimistic_locking_failure() {
+        ObjectOptimisticLockingFailureException ex =
+                new ObjectOptimisticLockingFailureException("WalletEntity", new RuntimeException());
+        ProblemDetail detail = handler.handleOptimisticLock(ex);
+
+        assertThat(detail.getStatus()).isEqualTo(409);
+        assertThat(detail.getProperties()).containsEntry("code", "resource.conflict");
+    }
+
+    @Test
+    void should_return_409_for_data_integrity_violation() {
+        DataIntegrityViolationException ex =
+                new DataIntegrityViolationException("unique constraint violation");
+        ProblemDetail detail = handler.handleDataIntegrity(ex);
+
+        assertThat(detail.getStatus()).isEqualTo(409);
+        assertThat(detail.getProperties()).containsEntry("code", "resource.conflict");
     }
 
     @Test

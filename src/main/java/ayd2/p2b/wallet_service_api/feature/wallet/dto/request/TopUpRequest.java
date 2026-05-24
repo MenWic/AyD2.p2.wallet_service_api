@@ -23,7 +23,7 @@ public class TopUpRequest {
     @Schema(description = "Amount to add to the wallet (must be positive)", required = true)
     private BigDecimal amount;
 
-    @NotNull(message = "transactionDate is required")
+    @NotNull(message = "paymentDate is required")
     @Schema(description = "User-supplied date for the transaction", required = true)
-    private LocalDate transactionDate;
+    private LocalDate paymentDate;
 }
