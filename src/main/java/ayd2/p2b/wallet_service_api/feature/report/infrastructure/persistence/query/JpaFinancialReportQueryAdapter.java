@@ -18,7 +18,7 @@ public class JpaFinancialReportQueryAdapter implements FinancialReportQueryPort 
 
     @Override
     public List<EarningsByCongressRow> findEarningsByCongress(FinancialReportCriteria criteria) {
-        String jpql = """
+        StringBuilder jpql = new StringBuilder("""
                 select new ayd2.p2b.wallet_service_api.feature.report.dto.internal.EarningsByCongressRow(
                     p.congressId,
                     p.congressNameSnapshot,
@@ -30,20 +30,52 @@ public class JpaFinancialReportQueryAdapter implements FinancialReportQueryPort 
                     count(p.id)
                 )
                 from PaymentEntity p
-                where (:congressId is null or p.congressId = :congressId)
-                  and (:institutionId is null or p.institutionId = :institutionId)
-                  and (:dateFrom is null or p.paymentDate >= :dateFrom)
-                  and (:dateTo is null or p.paymentDate <= :dateTo)
+                where p.id is not null
+                """);
+
+        if (criteria.getCongressId() != null) {
+            jpql.append(" and p.congressId = :congressId");
+        }
+
+        if (criteria.getInstitutionId() != null) {
+            jpql.append(" and p.institutionId = :institutionId");
+        }
+
+        if (criteria.getDateFrom() != null) {
+            jpql.append(" and p.paymentDate >= :dateFrom");
+        }
+
+        if (criteria.getDateTo() != null) {
+            jpql.append(" and p.paymentDate <= :dateTo");
+        }
+
+        jpql.append("""
+                
                 group by p.congressId, p.congressNameSnapshot, p.institutionId, p.institutionNameSnapshot
                 order by p.institutionNameSnapshot asc, p.congressNameSnapshot asc
-                """;
+                """);
 
-        TypedQuery<EarningsByCongressRow> query = entityManager.createQuery(jpql, EarningsByCongressRow.class);
-        query.setParameter("congressId", criteria.getCongressId());
-        query.setParameter("institutionId", criteria.getInstitutionId());
-        query.setParameter("dateFrom", criteria.getDateFrom());
-        query.setParameter("dateTo", criteria.getDateTo());
+        TypedQuery<EarningsByCongressRow> query = entityManager.createQuery(
+                jpql.toString(),
+                EarningsByCongressRow.class
+        );
+
+        if (criteria.getCongressId() != null) {
+            query.setParameter("congressId", criteria.getCongressId());
+        }
+
+        if (criteria.getInstitutionId() != null) {
+            query.setParameter("institutionId", criteria.getInstitutionId());
+        }
+
+        if (criteria.getDateFrom() != null) {
+            query.setParameter("dateFrom", criteria.getDateFrom());
+        }
+
+        if (criteria.getDateTo() != null) {
+            query.setParameter("dateTo", criteria.getDateTo());
+        }
+
         return query.getResultList();
     }
 }
-
