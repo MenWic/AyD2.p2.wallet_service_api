@@ -21,6 +21,11 @@ public class UpdateSystemConfigRequest {
     @NotNull(message = "Commission percent is required")
     @DecimalMin(value = "0.00", message = "Commission percent must be >= 0")
     @DecimalMax(value = "100.00", message = "Commission percent must be <= 100")
-    @Schema(description = "New commission percentage to apply to enrollment payments", example = "10.00")
+    @Schema(
+            description = "New commission percentage to apply to future payment registrations. Range [0,100].",
+            example = "10.00",
+            minimum = "0.00",
+            maximum = "100.00",
+            requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal commissionPercent;
 }

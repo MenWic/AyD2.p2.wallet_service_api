@@ -17,12 +17,12 @@ import java.util.UUID;
 @Schema(description = "System configuration data")
 public class SystemConfigResponse {
 
-    @Schema(description = "Commission percentage applied to enrollment payments", example = "10.00")
+    @Schema(description = "Current commission percentage used for new payment registrations", example = "10.00")
     private BigDecimal commissionPercent;
 
-    @Schema(description = "UUID of the admin who last updated this configuration")
+    @Schema(description = "UUID of the admin who last updated this configuration", example = "00000000-0000-0000-0000-000000000999")
     private UUID updatedBy;
 
-    @Schema(description = "Timestamp of the last update (ISO 8601 UTC)")
+    @Schema(description = "Timestamp of the last update (ISO 8601 UTC)", example = "2026-05-20T13:00:00Z")
     private Instant updatedAt;
 }

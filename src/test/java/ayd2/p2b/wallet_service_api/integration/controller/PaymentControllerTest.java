@@ -12,10 +12,12 @@ import ayd2.p2b.wallet_service_api.feature.payment.application.list.ListPayments
 import ayd2.p2b.wallet_service_api.feature.payment.application.register.RegisterPaymentResult;
 import ayd2.p2b.wallet_service_api.feature.payment.application.register.RegisterPaymentUseCase;
 import ayd2.p2b.wallet_service_api.feature.payment.controller.PaymentController;
+import ayd2.p2b.wallet_service_api.feature.payment.dto.internal.PaymentSearchCriteria;
 import ayd2.p2b.wallet_service_api.feature.payment.dto.response.PaymentResponse;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -28,8 +30,10 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -358,5 +362,65 @@ class PaymentControllerTest {
                 mvc.perform(get("/payments?dateFrom=2025-12-31&dateTo=2025-01-01"))
                                 .andExpect(status().isBadRequest())
                                 .andExpect(jsonPath("$.code").value("validation.failed"));
+        }
+
+        @Test
+        @WithMockJwt(roles = "SYSTEM_ADMIN")
+        void should_normalize_negative_page_to_zero_when_list_payments() throws Exception {
+                PageResponse<PaymentResponse> page = PageResponse.<PaymentResponse>builder()
+                                .items(List.of())
+                                .page(0)
+                                .size(20)
+                                .totalItems(0)
+                                .totalPages(0)
+                                .build();
+                given(listPaymentsUseCase.execute(any())).willReturn(page);
+
+                mvc.perform(get("/payments?page=-5&size=20"))
+                                .andExpect(status().isOk());
+
+                ArgumentCaptor<PaymentSearchCriteria> captor = ArgumentCaptor.forClass(PaymentSearchCriteria.class);
+                then(listPaymentsUseCase).should().execute(captor.capture());
+                assertThat(captor.getValue().getPage()).isEqualTo(0);
+        }
+
+        @Test
+        @WithMockJwt(roles = "SYSTEM_ADMIN")
+        void should_normalize_non_positive_size_to_twenty_when_list_payments() throws Exception {
+                PageResponse<PaymentResponse> page = PageResponse.<PaymentResponse>builder()
+                                .items(List.of())
+                                .page(0)
+                                .size(20)
+                                .totalItems(0)
+                                .totalPages(0)
+                                .build();
+                given(listPaymentsUseCase.execute(any())).willReturn(page);
+
+                mvc.perform(get("/payments?page=0&size=0"))
+                                .andExpect(status().isOk());
+
+                ArgumentCaptor<PaymentSearchCriteria> captor = ArgumentCaptor.forClass(PaymentSearchCriteria.class);
+                then(listPaymentsUseCase).should().execute(captor.capture());
+                assertThat(captor.getValue().getSize()).isEqualTo(20);
+        }
+
+        @Test
+        @WithMockJwt(roles = "SYSTEM_ADMIN")
+        void should_cap_size_to_one_hundred_when_list_payments() throws Exception {
+                PageResponse<PaymentResponse> page = PageResponse.<PaymentResponse>builder()
+                                .items(List.of())
+                                .page(0)
+                                .size(100)
+                                .totalItems(0)
+                                .totalPages(0)
+                                .build();
+                given(listPaymentsUseCase.execute(any())).willReturn(page);
+
+                mvc.perform(get("/payments?page=0&size=250"))
+                                .andExpect(status().isOk());
+
+                ArgumentCaptor<PaymentSearchCriteria> captor = ArgumentCaptor.forClass(PaymentSearchCriteria.class);
+                then(listPaymentsUseCase).should().execute(captor.capture());
+                assertThat(captor.getValue().getSize()).isEqualTo(100);
         }
 }

@@ -17,6 +17,9 @@ import java.util.UUID;
 public class CreateWalletRequest {
 
     @NotNull(message = "userId is required")
-    @Schema(description = "User ID for which the wallet is created", required = true)
+    @Schema(
+            description = "User ID for which the wallet is created. Must match the authenticated JWT principal.",
+            example = "00000000-0000-0000-0000-000000000001",
+            requiredMode = Schema.RequiredMode.REQUIRED)
     private UUID userId;
 }
