@@ -18,21 +18,21 @@ public final class TransactionSpecification {
 
     public static Specification<TransactionEntity> withType(TransactionType type) {
         if (type == null) {
-            return Specification.where((Specification<TransactionEntity>) null);
+            return (root, query, cb) -> cb.conjunction();
         }
         return (root, query, cb) -> cb.equal(root.get("type"), type);
     }
 
     public static Specification<TransactionEntity> fromDate(LocalDate from) {
         if (from == null) {
-            return Specification.where((Specification<TransactionEntity>) null);
+            return (root, query, cb) -> cb.conjunction();
         }
         return (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("transactionDate"), from);
     }
 
     public static Specification<TransactionEntity> toDate(LocalDate to) {
         if (to == null) {
-            return Specification.where((Specification<TransactionEntity>) null);
+            return (root, query, cb) -> cb.conjunction();
         }
         return (root, query, cb) -> cb.lessThanOrEqualTo(root.get("transactionDate"), to);
     }
