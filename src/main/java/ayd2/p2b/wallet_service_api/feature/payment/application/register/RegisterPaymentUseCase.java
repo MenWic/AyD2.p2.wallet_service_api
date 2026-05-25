@@ -65,8 +65,8 @@ public class RegisterPaymentUseCase {
                                 && existing.getInstitutionId().equals(command.getInstitutionId())
                                 && existing.getAmount().compareTo(command.getAmount()) == 0
                                 && existing.getPaymentDate().equals(command.getPaymentDate())
-                                && existing.getCongressNameSnapshot().equals(command.getCongressNameSnapshot())
-                                && existing.getInstitutionNameSnapshot().equals(command.getInstitutionNameSnapshot());
+                                && existing.getCongressNameSnapshot().strip().equals(command.getCongressNameSnapshot().strip())
+                                && existing.getInstitutionNameSnapshot().strip().equals(command.getInstitutionNameSnapshot().strip());
         }
 
         private PaymentResponse registerNew(RegisterPaymentCommand command, String idempotencyKey,
