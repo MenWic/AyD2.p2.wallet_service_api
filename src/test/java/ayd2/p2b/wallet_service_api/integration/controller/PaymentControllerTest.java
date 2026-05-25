@@ -243,13 +243,33 @@ class PaymentControllerTest {
         @Test
         @WithMockJwt(userId = "00000000-0000-0000-0000-000000000001", roles = "PARTICIPANT")
         void idempotency_key_too_long_returns_400() throws Exception {
-                String tooLong = "a".repeat(256);
+                String tooLong = "a".repeat(121);
 
                 mvc.perform(post("/payments/register")
                                 .header("Idempotency-Key", tooLong)
                                 .header("X-Service-Token", VALID_SERVICE_TOKEN)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(validRegisterBody()))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.code").value("validation.failed"));
+        }
+
+        @Test
+        @WithMockJwt(userId = "00000000-0000-0000-0000-000000000001", roles = "PARTICIPANT")
+        void amount_with_more_than_two_decimal_places_returns_400() throws Exception {
+                String body = "{\"userId\":\"" + USER_ID + "\","
+                                + "\"congressId\":\"" + CONGRESS_ID + "\","
+                                + "\"institutionId\":\"" + INSTITUTION_ID + "\","
+                                + "\"congressNameSnapshot\":\"Test Congress\","
+                                + "\"institutionNameSnapshot\":\"Test Institution\","
+                                + "\"amount\":100.001,"
+                                + "\"paymentDate\":\"2026-05-20\"}";
+
+                mvc.perform(post("/payments/register")
+                                .header("Idempotency-Key", "test-key-001")
+                                .header("X-Service-Token", VALID_SERVICE_TOKEN)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(body))
                                 .andExpect(status().isBadRequest())
                                 .andExpect(jsonPath("$.code").value("validation.failed"));
         }
