@@ -126,6 +126,25 @@ class TransactionRepositoryAdapterTest {
     }
 
     @Test
+    void should_return_all_transactions_when_no_filters_are_provided() {
+        transactionRepository.save(buildTransaction(
+                WALLET_USER, TransactionType.TOP_UP, new BigDecimal("50.00"),
+                LocalDate.of(2026, 1, 1), null, UUID.randomUUID()));
+        transactionRepository.save(buildTransaction(
+                WALLET_USER, TransactionType.PAYMENT, new BigDecimal("-30.00"),
+                LocalDate.of(2026, 2, 1), UUID.randomUUID(), UUID.randomUUID()));
+
+        Specification<TransactionEntity> spec = TransactionSpecification.forUser(WALLET_USER)
+                .and(TransactionSpecification.withType(null))
+                .and(TransactionSpecification.fromDate(null))
+                .and(TransactionSpecification.toDate(null));
+
+        Page<TransactionEntity> page = transactionRepository.findAll(spec, PageRequest.of(0, 10));
+
+        assertThat(page.getTotalElements()).isEqualTo(2);
+    }
+
+    @Test
     void should_reject_top_up_with_null_created_by() {
         TransactionEntity tx = new TransactionEntity();
         tx.setId(UUID.randomUUID());
