@@ -16,9 +16,9 @@ import java.util.UUID;
 @Schema(description = "Wallet balance response")
 public class WalletBalanceResponse {
 
-    @Schema(description = "User ID that owns the wallet")
+    @Schema(description = "User ID that owns the wallet", example = "00000000-0000-0000-0000-000000000001")
     private UUID userId;
 
-    @Schema(description = "Current wallet balance")
+    @Schema(description = "Current wallet balance in GTQ", example = "850.00")
     private BigDecimal balance;
 }

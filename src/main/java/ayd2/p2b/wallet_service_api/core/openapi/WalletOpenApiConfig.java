@@ -24,6 +24,7 @@ public class WalletOpenApiConfig {
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")
                                         .bearerFormat("JWT")
+                                        .description("JWT access token sent in Authorization header as: Bearer <token>")
                         )
                         .addSecuritySchemes(
                                 "serviceTokenAuth",

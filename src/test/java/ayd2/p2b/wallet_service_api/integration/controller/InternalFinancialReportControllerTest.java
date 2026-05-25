@@ -91,6 +91,17 @@ class InternalFinancialReportControllerTest {
     }
 
     @Test
+    void should_return_500_when_service_token_server_configuration_is_missing() throws Exception {
+        doThrow(new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "system.internal_error", "Service token missing on server"))
+                .when(conferenceServiceTokenValidator).validate("valid-token");
+
+        mvc.perform(get("/internal/reports/earnings")
+                        .header("X-Service-Token", "valid-token"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("system.internal_error"));
+    }
+
+    @Test
     void should_return_200_for_earnings_by_congress_with_valid_service_token_without_jwt() throws Exception {
         EarningsByCongressReportResponse response = EarningsByCongressReportResponse.builder()
                 .items(List.of(
@@ -223,4 +234,3 @@ class InternalFinancialReportControllerTest {
         assertThat(captor.getValue().getDateTo()).hasToString("2026-02-28");
     }
 }
-
