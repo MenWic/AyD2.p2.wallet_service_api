@@ -24,6 +24,14 @@ public class WalletOpenApiConfig {
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")
                                         .bearerFormat("JWT")
+                        )
+                        .addSecuritySchemes(
+                                "serviceTokenAuth",
+                                new SecurityScheme()
+                                        .type(SecurityScheme.Type.APIKEY)
+                                        .in(SecurityScheme.In.HEADER)
+                                        .name("X-Service-Token")
+                                        .description("Internal service-to-service token used by conference-service")
                         ));
     }
 }
