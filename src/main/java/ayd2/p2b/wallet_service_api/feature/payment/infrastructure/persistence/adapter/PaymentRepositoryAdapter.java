@@ -2,6 +2,7 @@ package ayd2.p2b.wallet_service_api.feature.payment.infrastructure.persistence.a
 
 import ayd2.p2b.wallet_service_api.common.response.PageResponse;
 import ayd2.p2b.wallet_service_api.feature.payment.application.port.PaymentRepositoryPort;
+import ayd2.p2b.wallet_service_api.feature.payment.application.register.DuplicatePaymentIdempotencyKeyException;
 import ayd2.p2b.wallet_service_api.feature.payment.domain.model.PaymentData;
 import ayd2.p2b.wallet_service_api.feature.payment.dto.internal.PaymentSearchCriteria;
 import ayd2.p2b.wallet_service_api.feature.payment.infrastructure.persistence.entity.PaymentEntity;
@@ -9,6 +10,7 @@ import ayd2.p2b.wallet_service_api.feature.payment.infrastructure.persistence.re
 import ayd2.p2b.wallet_service_api.feature.payment.infrastructure.persistence.specification.PaymentSpecification;
 import ayd2.p2b.wallet_service_api.feature.payment.mapper.PaymentMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
@@ -28,8 +30,16 @@ public class PaymentRepositoryAdapter implements PaymentRepositoryPort {
     @Override
     public PaymentData save(PaymentData payment) {
         PaymentEntity entity = paymentMapper.toEntity(payment);
-        PaymentEntity saved = jpaRepository.save(entity);
-        return paymentMapper.toDomain(saved);
+        try {
+            PaymentEntity saved = jpaRepository.saveAndFlush(entity);
+            return paymentMapper.toDomain(saved);
+        } catch (DataIntegrityViolationException ex) {
+            String msg = ex.getMessage() != null ? ex.getMessage().toLowerCase() : "";
+            if (msg.contains("uq_payment_idempotency") || msg.contains("idempotency_key")) {
+                throw new DuplicatePaymentIdempotencyKeyException(payment.getIdempotencyKey());
+            }
+            throw ex;
+        }
     }
 
     @Override

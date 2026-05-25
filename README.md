@@ -290,6 +290,31 @@ PUT /system/config
 
 Para request/response, errores, roles y ejemplos, usar Swagger UI cuando el microservicio tenga los controladores implementados.
 
+## Conference → Wallet service-to-service authentication
+
+`POST /payments/register` is an internal endpoint called only by `conference-service`.
+It requires both a valid participant JWT **and** a shared static token in the
+`X-Service-Token` header to prevent direct calls from browser clients.
+
+| Item | Detail |
+| ---- | ------ |
+| Environment variable (Wallet) | `CONFERENCE_WALLET_SERVICE_TOKEN` |
+| Wallet property | `integration.conference.service-token` |
+| Header expected by Wallet | `X-Service-Token: <value>` |
+| Conference env var | `CONFERENCE_WALLET_SERVICE_TOKEN` (same value) |
+| Conference property | `integration.wallet.service-token` |
+
+Both services must be configured with the **same secret value**.
+
+| Failure condition | HTTP response |
+| ----------------- | ------------- |
+| `CONFERENCE_WALLET_SERVICE_TOKEN` not set or blank on Wallet | `500 system.internal_error` |
+| `X-Service-Token` header missing or blank | `403 auth.forbidden` |
+| `X-Service-Token` header does not match configured token | `403 auth.forbidden` |
+
+In production the value comes from AWS Secrets Manager. In local development leave the
+variable unset to disable the endpoint until both services are properly configured.
+
 ## Ejecución rápida recomendada
 
 Modo individual:

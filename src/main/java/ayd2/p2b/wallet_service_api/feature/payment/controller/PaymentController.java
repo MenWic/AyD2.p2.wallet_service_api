@@ -77,11 +77,16 @@ public class PaymentController {
                                         "validation.failed",
                                         "Idempotency-Key header is required and must not be blank");
                 }
-                if (idempotencyKey.length() > 255) {
+                if (idempotencyKey.length() > 120) {
                         throw new ApiException(
                                         HttpStatus.BAD_REQUEST,
                                         "validation.failed",
-                                        "Idempotency-Key must not exceed 255 characters");
+                                        "Idempotency-Key must not exceed 120 characters");
+                }
+
+                if (request.getAmount() != null && request.getAmount().scale() > 2) {
+                        throw new ApiException(HttpStatus.BAD_REQUEST, "validation.failed",
+                                        "amount must have at most 2 decimal places");
                 }
 
                 // Validates presence and value of X-Service-Token; throws 403 or 500 on
@@ -106,8 +111,8 @@ public class PaymentController {
                                 .userId(request.getUserId())
                                 .congressId(request.getCongressId())
                                 .institutionId(request.getInstitutionId())
-                                .congressNameSnapshot(request.getCongressNameSnapshot())
-                                .institutionNameSnapshot(request.getInstitutionNameSnapshot())
+                                .congressNameSnapshot(request.getCongressNameSnapshot().strip())
+                                .institutionNameSnapshot(request.getInstitutionNameSnapshot().strip())
                                 .amount(request.getAmount())
                                 .paymentDate(request.getPaymentDate())
                                 .build();
